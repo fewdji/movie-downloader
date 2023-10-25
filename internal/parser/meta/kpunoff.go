@@ -58,23 +58,9 @@ func NewKpParser() *KpParser {
 
 func (p KpParser) FindByTitle(movieTitle string) (movies []Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s", p.url, url.QueryEscape(movieTitle))
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", apiUrl, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-API-KEY", p.token)
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	respResult, _ := io.ReadAll(resp.Body)
 	kpSearchResult := new(KpSearchResult)
 
-	err = json.Unmarshal(respResult, &kpSearchResult)
+	err := p.makeRequest(apiUrl, &kpSearchResult)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,24 +83,9 @@ func (p KpParser) FindByTitle(movieTitle string) (movies []Movie) {
 func (p KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", apiUrl, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-API-KEY", p.token)
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	respResult, _ := io.ReadAll(resp.Body)
 	kpMovie := new(KpMovie)
 
-	//fmt.Println(string(respResult))
-
-	err = json.Unmarshal(respResult, &kpMovie)
+	err := p.makeRequest(apiUrl, &kpMovie)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,6 +99,32 @@ func (p KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 		Year:         strconv.Itoa(kpMovie.Year),
 		Length:       kpMovie.FilmLength,
 		Completed:    true,
+	}
+
+	return
+}
+
+func (p KpParser) makeRequest(url string, result interface{}) (err error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("X-API-KEY", p.token)
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	respResult, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(respResult, &result)
+	if err != nil {
+		return err
 	}
 
 	return

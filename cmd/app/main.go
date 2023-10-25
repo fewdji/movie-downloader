@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"log"
@@ -9,7 +10,9 @@ import (
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
 	"os"
+	"runtime"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -40,8 +43,19 @@ func main() {
 
 	commander := commands.NewCommander(bot, kpParser, tp, *pm)
 
+	go MonitorTask()
+	fmt.Println(runtime.NumGoroutine())
 	for update := range updates {
+		fmt.Println(runtime.NumGoroutine())
 		log.Printf("%+v\n", update)
 		commander.HandleUpdate(update)
+	}
+}
+
+func MonitorTask() {
+	for {
+		time.Sleep(time.Second * 10)
+		fmt.Println("task working")
+		fmt.Println(runtime.NumGoroutine())
 	}
 }

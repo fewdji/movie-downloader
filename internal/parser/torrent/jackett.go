@@ -146,9 +146,6 @@ DLOOP:
 		}
 	}
 
-	gg := d.VideoMap.DynamicRange
-	fmt.Println(gg)
-
 	//if meta.Length != 0 {
 	//	film_lenth := int(meta.Length / 60)
 	//	size_mb := int(movie.Size) / 1048576 // movie size in Mb
