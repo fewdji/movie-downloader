@@ -1,0 +1,38 @@
+{
+  "preset": {
+    "resolution": "UHD",
+    "hdr": "DV",
+    "container": "HEVC",
+    "bitrate_min": 7000,
+    "bitrate_max": 20000
+  },
+  "video_map": {
+    "resolution": [
+      {"name": "UHD", "masks": ["2160p"]},
+      {"name": "FHD", "masks": ["1080p"]},
+      {"name": "HD", "masks": ["720p"]},
+      {"name": "MD", "masks": ["-AVC"]},
+      {"name": "SD", "masks": ["Rip"]}
+    ],
+    "quality": [
+      {"name": "BDRem", "masks": ["Blu-Ray Remux", "BDRemux", "BD Remux"]},
+      {"name": "HDDVDRem", "masks": ["HDDVD-Remux", "HDDVD Remux", "HD-DVD Remux"]},
+      {"name": "BDRip", "masks": ["BDRip", "BD-Rip"]},
+      {"name": "HDDVDRip", "masks": ["HDDVDRip", "HDDVD-Rip", "HD-DVDRip"]},
+      {"name": "WEBDL", "masks": ["WEB-DL", "WEBDL"]},
+      {"name": "WEBRip", "masks": ["WEBRip", "WEB-Rip", "WEB-DLRip", "WEBDLRip"]},
+      {"name": "HDRip", "masks": ["HDRip"]},
+      {"name": "HDTV", "masks": ["HDTV", "HD-TV"]},
+      {"name": "HDTVRip", "masks": ["HDTVRip", "HDTV-Rip"]},
+      {"name": "DVDRip", "masks": ["DVDRip"]},
+      {"name": "SATRip", "masks": ["SATRip", "TVRip"]}
+    ],
+    "container": [
+      {"name": "HEVC", "masks": ["HEVC", "H.265"]}
+    ],
+    "dynamic_range": [
+      {"name": "DV", "masks": ["Dolby Vision"]},
+      {"name": "HDR", "masks": ["HDR"]}
+    ]
+  }
+}

@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 )
 
 type KpParser struct {
@@ -57,8 +56,8 @@ func NewKpParser() *KpParser {
 	}
 }
 
-func (p *KpParser) FindByName(movieName string) (movies []Movie) {
-	apiUrl := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s", p.url, url.QueryEscape(movieName))
+func (p KpParser) FindByTitle(movieTitle string) (movies []Movie) {
+	apiUrl := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s", p.url, url.QueryEscape(movieTitle))
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", apiUrl, nil)
@@ -95,9 +94,8 @@ func (p *KpParser) FindByName(movieName string) (movies []Movie) {
 	return
 }
 
-func (p *KpParser) GetById(id string) (metaMovie Movie) {
-	movieId := id[strings.LastIndex(id, "/")+1:]
-	apiUrl := fmt.Sprintf("%s/v2.2/films/%s", p.url, url.QueryEscape(movieId))
+func (p KpParser) GetByKpId(kpId int) (metaMovie Movie) {
+	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", apiUrl, nil)

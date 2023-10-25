@@ -1,8 +1,8 @@
 package meta
 
 type Parser interface {
-	FindByName(movieName string) []Movie
-	GetById(id string) Movie
+	FindByTitle(movieTitle string) []Movie
+	GetByKpId(kpId int) Movie
 }
 
 type Movie struct {

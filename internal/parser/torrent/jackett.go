@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type JackettParser struct {
@@ -34,6 +36,11 @@ type JackettMovie struct {
 		Name    string `xml:"name,attr"`
 		Value   string `xml:"value,attr"`
 	} `xml:"attr"`
+	Quality      string
+	Resolution   string
+	DynamicRange string
+	Container    string
+	Bitrate      int
 }
 
 func NewJackettParser() *JackettParser {
@@ -43,7 +50,7 @@ func NewJackettParser() *JackettParser {
 	}
 }
 
-func (p *JackettParser) Find(metaMovie meta.Movie) (movies []Movie) {
+func (p JackettParser) Find(metaMovie meta.Movie) (movies []Movie) {
 
 	fmt.Println(metaMovie.NameRu + " " + metaMovie.Year)
 
@@ -71,16 +78,81 @@ func (p *JackettParser) Find(metaMovie meta.Movie) (movies []Movie) {
 				seeds, _ = strconv.Atoi(attr.Value)
 			}
 		}
+		p.Classified(&jackettMovie)
 		movies = append(movies, Movie{
-			Meta:      metaMovie,
-			Title:     jackettMovie.Title,
-			Tracker:   jackettMovie.Tracker,
-			Link:      jackettMovie.Link,
-			Published: jackettMovie.Published,
-			Size:      jackettMovie.Size,
-			Seeds:     seeds,
+			Meta:         metaMovie,
+			Title:        jackettMovie.Title,
+			Tracker:      jackettMovie.Tracker,
+			Link:         jackettMovie.Link,
+			Published:    jackettMovie.Published,
+			Size:         jackettMovie.Size,
+			Seeds:        seeds,
+			Quality:      jackettMovie.Quality,
+			Resolution:   jackettMovie.Resolution,
+			DynamicRange: jackettMovie.DynamicRange,
+			Container:    jackettMovie.Container,
 		})
 	}
 
 	return
+}
+
+func (p JackettParser) GetById(id string) (movie Movie) {
+	return
+}
+
+func (p JackettParser) Classified(movie *JackettMovie) {
+	d := params.NewParams()
+
+RLOOP:
+	for _, v := range d.VideoMap.Resolution {
+		for _, mask := range v.Masks {
+			if strings.Contains(movie.Title, mask) {
+				movie.Resolution = v.Name
+				break RLOOP
+			}
+		}
+	}
+
+QLOOP:
+	for _, v := range d.VideoMap.Quality {
+		for _, mask := range v.Masks {
+			if strings.Contains(movie.Title, mask) {
+				movie.Quality = v.Name
+				break QLOOP
+			}
+		}
+	}
+
+CLOOP:
+	for _, v := range d.VideoMap.Container {
+		movie.Container = "AVC"
+		for _, mask := range v.Masks {
+			if strings.Contains(movie.Title, mask) {
+				movie.Container = v.Name
+				break CLOOP
+			}
+		}
+	}
+
+DLOOP:
+	for _, v := range d.VideoMap.DynamicRange {
+		movie.DynamicRange = "SDR"
+		for _, mask := range v.Masks {
+			if strings.Contains(movie.Title, mask) {
+				movie.DynamicRange = v.Name
+				break DLOOP
+			}
+		}
+	}
+
+	gg := d.VideoMap.DynamicRange
+	fmt.Println(gg)
+
+	//if meta.Length != 0 {
+	//	film_lenth := int(meta.Length / 60)
+	//	size_mb := int(movie.Size) / 1048576 // movie size in Mb
+	//	movie.Bitrate = int(size_mb / film_lenth)
+	//}
+
 }
