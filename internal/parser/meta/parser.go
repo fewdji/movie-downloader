@@ -6,10 +6,11 @@ type Parser interface {
 }
 
 type Movie struct {
+	Id           int
 	Type         string
 	Completed    bool
 	NameRu       string
 	NameOriginal string
-	Year         string
+	Year         int
 	Length       int
 }

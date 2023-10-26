@@ -55,7 +55,7 @@ func NewJackettParser() *JackettParser {
 
 func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 
-	query := metaMovie.NameRu + " " + metaMovie.Year
+	query := fmt.Sprintf("%s %s", metaMovie.NameRu, metaMovie.Year)
 
 	fmt.Println(query)
 

@@ -18,29 +18,21 @@ type KpParser struct {
 }
 
 type KpSearchResult struct {
-	SearchFilmsCountResult int `json:"searchFilmsCountResult"`
-	Films                  []struct {
-		FilmID     int    `json:"filmId"`
-		NameRu     string `json:"nameRu"`
-		NameEn     string `json:"nameEn"`
-		Type       string `json:"type"`
-		Year       string `json:"year"`
-		FilmLength string `json:"filmLength"`
-	} `json:"films"`
+	Count  int       `json:"searchFilmsCountResult"`
+	Movies []KpMovie `json:"films"`
 }
 
 type KpMovie struct {
-	KinopoiskID  int    `json:"kinopoiskId"`
-	NameRu       string `json:"nameRu"`
-	NameEn       string `json:"nameEn"`
-	NameOriginal string `json:"nameOriginal"`
-	Year         int    `json:"year"`
-	FilmLength   string `json:"filmLength"`
-	Type         string `json:"type"`
-	StartYear    int    `json:"startYear"`
-	EndYear      int    `json:"endYear"`
-	Serial       bool   `json:"serial"`
-	Completed    bool   `json:"completed"`
+	KpId      int    `json:"filmId"`
+	NameRu    string `json:"nameRu"`
+	NameEn    string `json:"nameEn"`
+	Year      string `json:"year"`
+	Length    string `json:"filmLength"`
+	Type      string `json:"type"`
+	StartYear int    `json:"startYear"`
+	EndYear   int    `json:"endYear"`
+	Serial    bool   `json:"serial"`
+	Completed bool   `json:"completed"`
 }
 
 func NewKpParser() *KpParser {
@@ -59,18 +51,21 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 		log.Fatal(err)
 	}
 
-	for _, kpMovie := range kpSearchResult.Films {
-		movieLength, _ := p.stringFilmLengthToInt(kpMovie.FilmLength)
+	for _, kpMovie := range kpSearchResult.Movies {
+		println(kpMovie.Year)
+		kpMovie.setMovieLength()
+		movieLength, _ := strconv.Atoi(kpMovie.Length)
+		movieYear, _ := strconv.Atoi(kpMovie.Year)
 
 		metaMovie := Movie{
+			Id:           kpMovie.KpId,
 			Type:         kpMovie.Type,
 			NameRu:       kpMovie.NameRu,
 			NameOriginal: kpMovie.NameEn,
-			Year:         kpMovie.Year,
+			Year:         movieYear,
 			Length:       movieLength,
 			Completed:    true,
 		}
-
 		metaMovies = append(metaMovies, metaMovie)
 	}
 
@@ -81,20 +76,23 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
 	kpMovie := new(KpMovie)
-
 	err := p.makeRequest(apiUrl, &kpMovie)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	movieLength, _ := p.stringFilmLengthToInt(kpMovie.FilmLength)
+	kpMovie.setMovieLength()
+	movieLength, _ := strconv.Atoi(kpMovie.Length)
+	movieYear, _ := strconv.Atoi(kpMovie.Year)
 
 	metaMovie = Movie{
+		Id:           kpId,
 		Type:         kpMovie.Type,
 		NameRu:       kpMovie.NameRu,
 		NameOriginal: kpMovie.NameEn,
-		Year:         strconv.Itoa(kpMovie.Year),
+		Year:         movieYear,
 		Length:       movieLength,
+		Completed:    kpMovie.Completed,
 	}
 
 	return
@@ -126,8 +124,8 @@ func (p *KpParser) makeRequest(url string, result interface{}) (err error) {
 	return
 }
 
-func (mov *KpMovie) SetMovieLength() {
-	hhmm := strings.Split(mov.FilmLength, ":")
+func (mov *KpMovie) setMovieLength() {
+	hhmm := strings.Split(mov.Length, ":")
 	if len(hhmm) != 2 {
 		return
 	}
@@ -139,20 +137,5 @@ func (mov *KpMovie) SetMovieLength() {
 	}
 
 	inMinutes := hh*60 + mm
-	mov.FilmLength = strconv.Itoa(inMinutes)
-}
-
-func (p *KpParser) stringFilmLengthToInt(strTime string) (result int, err error) {
-	hhmm := strings.Split(strTime, ":")
-	if len(hhmm) != 2 {
-		return
-	}
-
-	hh, err := strconv.Atoi(hhmm[0])
-	mm, err := strconv.Atoi(hhmm[1])
-	if err != nil {
-		return
-	}
-
-	return hh*60 + mm, nil
+	mov.Length = strconv.Itoa(inMinutes)
 }
