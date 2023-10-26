@@ -6,7 +6,6 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"movie-downloader-bot/internal/commander"
-	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
 	"os"
@@ -16,15 +15,10 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env", "config.env")
+	err := godotenv.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	pm := params.NewParams()
-
-	kpParser := meta.NewKpParser()
-	tp := torrent.NewJackettParser()
 
 	tgBotToken := os.Getenv("TG_BOT_TOKEN")
 	bot, err := tgbotapi.NewBotAPI(tgBotToken)
@@ -41,12 +35,13 @@ func main() {
 
 	updates := bot.GetUpdatesChan(updateConfig)
 
-	commander := commands.NewCommander(bot, kpParser, tp, *pm)
+	kpParser := meta.NewKpParser()
+	tParser := torrent.NewJackettParser()
+	commander := commands.NewCommander(bot, kpParser, tParser)
 
 	go MonitorTask()
-	fmt.Println(runtime.NumGoroutine())
+
 	for update := range updates {
-		fmt.Println(runtime.NumGoroutine())
 		log.Printf("%+v\n", update)
 		commander.HandleUpdate(update)
 	}

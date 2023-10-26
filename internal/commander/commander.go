@@ -1,14 +1,12 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,19 +16,15 @@ type Commander struct {
 	bot     *tgbotapi.BotAPI
 	meta    meta.Parser
 	torrent torrent.Parser
-	params  params.Params
+	params  *params.Params
 }
 
-type CommandData struct {
-	Offset int `json:"offset"`
-}
-
-func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, params params.Params) *Commander {
+func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser) *Commander {
 	return &Commander{
 		bot:     bot,
 		meta:    meta,
 		torrent: torrent,
-		params:  params,
+		params:  params.NewParams(),
 	}
 }
 
@@ -42,15 +36,8 @@ func (c *Commander) HandleUpdate(update tgbotapi.Update) {
 	}()
 
 	if update.CallbackQuery != nil {
-		parsedData := CommandData{}
-		err := json.Unmarshal([]byte(update.CallbackQuery.Data), &parsedData)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		strings.Split(update.CallbackQuery.Data, "_")
-		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Param is: %+v\n", parsedData))
-		_, err = c.bot.Send(msg)
+		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Param is: %+v\n", []byte(update.CallbackQuery.Data)))
+		_, err := c.bot.Send(msg)
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -67,11 +54,9 @@ func (c *Commander) HandleUpdate(update tgbotapi.Update) {
 		c.Start(update.Message)
 	}
 
-	//downloadCommand :=
-
 	msgTxt := strings.ToLower(strings.Trim(update.Message.Text, " /"))
 
-	downloadRe := regexp.MustCompile(os.Getenv("DOWNLOAD_CMD"))
+	downloadRe := regexp.MustCompile(c.params.Commands.Download)
 
 	switch {
 	case strings.Contains(msgTxt, "kinopoisk.ru/film"):
@@ -107,7 +92,7 @@ func (c *Commander) HandleUpdate(update tgbotapi.Update) {
 		fmt.Println(movie.NameRu)
 		res := c.torrent.Find(movie)
 		for _, movie := range res {
-			fmt.Println(movie.Title, "||| ", movie.Quality, " ", movie.Resolution, " ", movie.Container, " ", movie.DynamicRange)
+			fmt.Println(movie.Title, "||| ", movie.Quality, " ", movie.Resolution, " ", movie.Container, " ", movie.DynamicRange, " ", movie.Bitrate)
 		}
 	}
 

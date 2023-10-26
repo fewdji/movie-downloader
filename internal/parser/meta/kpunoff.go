@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type KpParser struct {
@@ -17,36 +18,29 @@ type KpParser struct {
 }
 
 type KpSearchResult struct {
-	Keyword                string `json:"keyword"`
-	SearchFilmsCountResult int    `json:"searchFilmsCountResult"`
+	SearchFilmsCountResult int `json:"searchFilmsCountResult"`
 	Films                  []struct {
 		FilmID     int    `json:"filmId"`
-		NameRu     string `json:"nameRu,omitempty"`
-		NameEn     string `json:"nameEn,omitempty"`
+		NameRu     string `json:"nameRu"`
+		NameEn     string `json:"nameEn"`
 		Type       string `json:"type"`
 		Year       string `json:"year"`
-		FilmLength string `json:"filmLength,omitempty"`
+		FilmLength string `json:"filmLength"`
 	} `json:"films"`
 }
 
 type KpMovie struct {
-	KinopoiskID              int     `json:"kinopoiskId"`
-	NameRu                   string  `json:"nameRu"`
-	NameEn                   string  `json:"nameEn"`
-	NameOriginal             string  `json:"nameOriginal"`
-	PosterURLPreview         string  `json:"posterUrlPreview"`
-	RatingKinopoisk          float64 `json:"ratingKinopoisk"`
-	RatingKinopoiskVoteCount int     `json:"ratingKinopoiskVoteCount"`
-	RatingImdb               float64 `json:"ratingImdb"`
-	RatingImdbVoteCount      int     `json:"ratingImdbVoteCount"`
-	Year                     int     `json:"year"`
-	FilmLength               int     `json:"filmLength"`
-	Type                     string  `json:"type"`
-	StartYear                int     `json:"startYear"`
-	EndYear                  int     `json:"endYear"`
-	Serial                   bool    `json:"serial"`
-	ShortFilm                bool    `json:"shortFilm"`
-	Completed                bool    `json:"completed"`
+	KinopoiskID  int    `json:"kinopoiskId"`
+	NameRu       string `json:"nameRu"`
+	NameEn       string `json:"nameEn"`
+	NameOriginal string `json:"nameOriginal"`
+	Year         int    `json:"year"`
+	FilmLength   string `json:"filmLength"`
+	Type         string `json:"type"`
+	StartYear    int    `json:"startYear"`
+	EndYear      int    `json:"endYear"`
+	Serial       bool   `json:"serial"`
+	Completed    bool   `json:"completed"`
 }
 
 func NewKpParser() *KpParser {
@@ -66,7 +60,7 @@ func (p KpParser) FindByTitle(movieTitle string) (movies []Movie) {
 	}
 
 	for _, kpMovie := range kpSearchResult.Films {
-		movieLength, _ := strconv.Atoi(kpMovie.FilmLength)
+		movieLength, _ := p.stringFilmLengthToInt(kpMovie.FilmLength)
 		movies = append(movies, Movie{
 			Type:         kpMovie.Type,
 			NameRu:       kpMovie.NameRu,
@@ -90,15 +84,14 @@ func (p KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 		log.Fatal(err)
 	}
 
-	fmt.Println(kpMovie.NameRu, " -l ", kpMovie.Year, " - ", kpMovie.Completed)
+	movieLength, _ := p.stringFilmLengthToInt(kpMovie.FilmLength)
 
 	metaMovie = Movie{
 		Type:         kpMovie.Type,
 		NameRu:       kpMovie.NameRu,
 		NameOriginal: kpMovie.NameEn,
 		Year:         strconv.Itoa(kpMovie.Year),
-		Length:       kpMovie.FilmLength,
-		Completed:    true,
+		Length:       movieLength,
 	}
 
 	return
@@ -128,4 +121,19 @@ func (p KpParser) makeRequest(url string, result interface{}) (err error) {
 	}
 
 	return
+}
+
+func (p KpParser) stringFilmLengthToInt(strTime string) (result int, err error) {
+	hhmm := strings.Split(strTime, ":")
+	if len(hhmm) != 2 {
+		return
+	}
+
+	hh, err := strconv.Atoi(hhmm[0])
+	mm, err := strconv.Atoi(hhmm[1])
+	if err != nil {
+		return
+	}
+
+	return hh*60 + mm, nil
 }

@@ -78,7 +78,7 @@ func (p JackettParser) Find(metaMovie meta.Movie) (movies []Movie) {
 				seeds, _ = strconv.Atoi(attr.Value)
 			}
 		}
-		p.Classified(&jackettMovie)
+		p.Classified(&jackettMovie, metaMovie)
 		movies = append(movies, Movie{
 			Meta:         metaMovie,
 			Title:        jackettMovie.Title,
@@ -91,6 +91,7 @@ func (p JackettParser) Find(metaMovie meta.Movie) (movies []Movie) {
 			Resolution:   jackettMovie.Resolution,
 			DynamicRange: jackettMovie.DynamicRange,
 			Container:    jackettMovie.Container,
+			Bitrate:      jackettMovie.Bitrate,
 		})
 	}
 
@@ -101,7 +102,7 @@ func (p JackettParser) GetById(id string) (movie Movie) {
 	return
 }
 
-func (p JackettParser) Classified(movie *JackettMovie) {
+func (p JackettParser) Classified(movie *JackettMovie, meta meta.Movie) {
 	d := params.NewParams()
 
 RLOOP:
@@ -146,10 +147,10 @@ DLOOP:
 		}
 	}
 
-	//if meta.Length != 0 {
-	//	film_lenth := int(meta.Length / 60)
-	//	size_mb := int(movie.Size) / 1048576 // movie size in Mb
-	//	movie.Bitrate = int(size_mb / film_lenth)
-	//}
+	if meta.Length != 0 {
+		filmLength := meta.Length / 60
+		sizeMb := int(movie.Size) / 1048576
+		movie.Bitrate = sizeMb / filmLength
+	}
 
 }
