@@ -50,7 +50,7 @@ func NewKpParser() *KpParser {
 	}
 }
 
-func (p KpParser) FindByTitle(movieTitle string) (movies []Movie) {
+func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s", p.url, url.QueryEscape(movieTitle))
 	kpSearchResult := new(KpSearchResult)
 
@@ -61,20 +61,23 @@ func (p KpParser) FindByTitle(movieTitle string) (movies []Movie) {
 
 	for _, kpMovie := range kpSearchResult.Films {
 		movieLength, _ := p.stringFilmLengthToInt(kpMovie.FilmLength)
-		movies = append(movies, Movie{
+
+		metaMovie := Movie{
 			Type:         kpMovie.Type,
 			NameRu:       kpMovie.NameRu,
 			NameOriginal: kpMovie.NameEn,
 			Year:         kpMovie.Year,
 			Length:       movieLength,
 			Completed:    true,
-		})
+		}
+
+		metaMovies = append(metaMovies, metaMovie)
 	}
 
 	return
 }
 
-func (p KpParser) GetByKpId(kpId int) (metaMovie Movie) {
+func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
 	kpMovie := new(KpMovie)
@@ -97,7 +100,7 @@ func (p KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 	return
 }
 
-func (p KpParser) makeRequest(url string, result interface{}) (err error) {
+func (p *KpParser) makeRequest(url string, result interface{}) (err error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -123,7 +126,23 @@ func (p KpParser) makeRequest(url string, result interface{}) (err error) {
 	return
 }
 
-func (p KpParser) stringFilmLengthToInt(strTime string) (result int, err error) {
+func (mov *KpMovie) SetMovieLength() {
+	hhmm := strings.Split(mov.FilmLength, ":")
+	if len(hhmm) != 2 {
+		return
+	}
+
+	hh, err := strconv.Atoi(hhmm[0])
+	mm, err := strconv.Atoi(hhmm[1])
+	if err != nil {
+		return
+	}
+
+	inMinutes := hh*60 + mm
+	mov.FilmLength = strconv.Itoa(inMinutes)
+}
+
+func (p *KpParser) stringFilmLengthToInt(strTime string) (result int, err error) {
 	hhmm := strings.Split(strTime, ":")
 	if len(hhmm) != 2 {
 		return

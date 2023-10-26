@@ -14,9 +14,16 @@
     "bitrate_max": 20000
   },
   "video_filter": {
-    "keywords": {
-      "exclude": ["трейлер", " тизер", "(тизер", "[тизер", "-тизер", " upscale", "(upscale", "[upscale", "-upscale", "camrip", " ts ", "(ts)", "hdts", "ts-avc", "camrip-avc", "BR-DISK", "DVD9", "DVD5", "Anaglyph", "Blu-ray 1080", "1080p, 720p", "[iPad] ", "[VIDEO] ", " Blu-ray Disc", "Blu-ray (custom)", "VHSRip", "Telesync", "Telecine", " | UKR", "[UKR", "[БЕЗ ПЕРЕВОДА]", "КПК"],
-      "exclude_collections": ["Антология", "Коллекция", "Тридекалогия", "Додекалогия", "Ундекалогия", "Декалогия", "Ноналогия", "Окталогия", "Гепталогия", "Гексалогия", "Пенталогия", "Тетралогия", "Квадрология", "Трилогия", "Дилогия", "s0", "s01", "s2", "s02", "s3", "s03", "s4", "s04", "s5", "s05", "s6", "s06", "s7", "s07", "s8", "s08", "s9", "s09", "s10", "s11", "s12", "s13", "s14", "s15", "s16", " Сезон:", " Сезоны:"]
+    "exclude": {
+      "trailers": ["трейлер", " тизер", "(тизер", "[тизер", "-тизер"],
+      "bad_quality": ["camrip", " ts ", "(ts)", "hdts", "ts-avc", "Telesync", "Telecine", "VHSRip", " | AD"],
+      "bad_formats": ["[iPad] ", "КПК", "[VIDEO] ", " upscale", "(upscale", "[upscale", "-upscale"],
+      "disks": ["DVD9", "DVD5", "BR-DISK", "Blu-ray 1080", "1080p, 720p", " Blu-ray Disc", "Blu-ray (custom)", "Blu-ray EUR", "Blu-Ray от"],
+      "remux": ["Remux"],
+      "other_languages": ["[БЕЗ ПЕРЕВОДА]", " | UKR", "[UKR"],
+      "stereo3d":  ["3D-Video", "3D Video", "стереопара", "Anaglyph"],
+      "collections": ["Антология", "Коллекция", "Тридекалогия", "Додекалогия", "Ундекалогия", "Декалогия", "Ноналогия", "Окталогия", "Гепталогия", "Гексалогия", "Пенталогия", "Тетралогия", "Квадрология", "Трилогия", "Дилогия"],
+      "series": ["s0", "s01", "s2", "s02", "s3", "s03", "s4", "s04", "s5", "s05", "s6", "s06", "s7", "s07", "s8", "s08", "s9", "s09", "s10", "s11", "s12", "s13", "s14", "s15", "s16", " Сезон:", " Сезоны:"]
     }
   },
   "video_map": {
@@ -28,7 +35,7 @@
       {"name": "SD", "masks": ["Rip"]}
     ],
     "quality": [
-      {"name": "BDRem", "masks": ["Blu-Ray Remux", "BDRemux", "BD Remux"]},
+      {"name": "BDRem", "masks": ["Blu-Ray Remux", "BDRemux", "BD Remux", "BD-Remux"]},
       {"name": "HDDVDRem", "masks": ["HDDVD-Remux", "HDDVD Remux", "HD-DVD Remux"]},
       {"name": "BDRip", "masks": ["BDRip", "BD-Rip"]},
       {"name": "HDDVDRip", "masks": ["HDDVDRip", "HDDVD-Rip", "HD-DVDRip"]},

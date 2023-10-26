@@ -23,10 +23,17 @@ type Params struct {
 		BitrateMax int    `json:"bitrate_max"`
 	} `json:"preset"`
 	VideoFilter struct {
-		Keywords struct {
-			Exclude            []string `json:"exclude"`
-			ExcludeCollections []string `json:"exclude_collections"`
-		} `json:"keywords"`
+		Exclude struct {
+			Trailers       []string `json:"trailers"`
+			BadQuality     []string `json:"bad_quality"`
+			BadFormats     []string `json:"bad_formats"`
+			Disks          []string `json:"disks"`
+			Remux          []string `json:"remux"`
+			OtherLanguages []string `json:"other_languages"`
+			Stereo3D       []string `json:"stereo_3d"`
+			Collections    []string `json:"collections"`
+			Series         []string `json:"series"`
+		} `json:"exclude"`
 	} `json:"video_filter"`
 	VideoMap struct {
 		Resolution []struct {

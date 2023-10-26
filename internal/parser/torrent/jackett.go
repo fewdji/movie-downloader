@@ -7,16 +7,17 @@ import (
 	"log"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
+	"movie-downloader-bot/pkg/helper"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 )
 
 type JackettParser struct {
-	url   string
-	token string
+	url    string
+	token  string
+	params *params.Params
 }
 
 type JackettSearchResult struct {
@@ -36,6 +37,7 @@ type JackettMovie struct {
 		Name    string `xml:"name,attr"`
 		Value   string `xml:"value,attr"`
 	} `xml:"attr"`
+	Seeds        int
 	Quality      string
 	Resolution   string
 	DynamicRange string
@@ -45,112 +47,80 @@ type JackettMovie struct {
 
 func NewJackettParser() *JackettParser {
 	return &JackettParser{
-		url:   os.Getenv("JACKETT_API_URL"),
-		token: os.Getenv("JACKETT_API_TOKEN"),
+		url:    os.Getenv("JACKETT_API_URL"),
+		token:  os.Getenv("JACKETT_API_TOKEN"),
+		params: params.NewParams(),
 	}
 }
 
-func (p JackettParser) Find(metaMovie meta.Movie) (movies []Movie) {
+func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 
-	fmt.Println(metaMovie.NameRu + " " + metaMovie.Year)
+	query := metaMovie.NameRu + " " + metaMovie.Year
 
-	apiUrl := fmt.Sprintf("%s/all/results/torznab/api?apikey=%s&t=search&q=%s", p.url, p.token, url.QueryEscape(metaMovie.NameRu+" "+metaMovie.Year))
+	fmt.Println(query)
 
-	resp, _ := http.Get(apiUrl)
-
-	body, _ := io.ReadAll(resp.Body)
-
-	//fmt.Println(string(body))
-
-	searchResults := new(JackettSearchResult)
-
-	err := xml.Unmarshal(body, &searchResults)
+	searchResult, err := prs.makeRequest(query, "all")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//fmt.Println(len(searchResults.JackettMovies))
+	for _, jackettMovie := range searchResult.JackettMovies {
+		jackettMovie.setSeeds()
 
-	for _, jackettMovie := range searchResults.JackettMovies {
-		seeds := 0
-		for _, attr := range jackettMovie.Props {
-			if attr.Name == "seeds" {
-				seeds, _ = strconv.Atoi(attr.Value)
-			}
-		}
-		p.Classified(&jackettMovie, metaMovie)
-		movies = append(movies, Movie{
+		torrentMovie := Movie{
 			Meta:         metaMovie,
 			Title:        jackettMovie.Title,
 			Tracker:      jackettMovie.Tracker,
 			Link:         jackettMovie.Link,
 			Published:    jackettMovie.Published,
 			Size:         jackettMovie.Size,
-			Seeds:        seeds,
+			Seeds:        jackettMovie.Seeds,
 			Quality:      jackettMovie.Quality,
 			Resolution:   jackettMovie.Resolution,
 			DynamicRange: jackettMovie.DynamicRange,
 			Container:    jackettMovie.Container,
 			Bitrate:      jackettMovie.Bitrate,
-		})
+		}
+
+		torrentMovie.SetVideoProps()
+		torrentMovies = append(torrentMovies, torrentMovie)
+		torrentMovies.BaseFilter().NoRemux()
 	}
 
 	return
 }
 
-func (p JackettParser) GetById(id string) (movie Movie) {
+func (prs *JackettParser) GetById(id string) (movie Movie) {
 	return
 }
 
-func (p JackettParser) Classified(movie *JackettMovie, meta meta.Movie) {
-	d := params.NewParams()
+func (prs *JackettParser) Filter(movie *JackettMovie) bool {
+	if helper.ContainsAny(movie.Title, prs.params.VideoFilter.Exclude.BadQuality) {
+		return false
+	}
+	return true
+}
 
-RLOOP:
-	for _, v := range d.VideoMap.Resolution {
-		for _, mask := range v.Masks {
-			if strings.Contains(movie.Title, mask) {
-				movie.Resolution = v.Name
-				break RLOOP
-			}
+func (prs *JackettParser) makeRequest(query string, tracker string) (result *JackettSearchResult, err error) {
+	apiUrl := fmt.Sprintf("%s/%s/results/torznab/api?apikey=%s&t=search&q=%s", prs.url, tracker, prs.token, url.QueryEscape(query))
+	resp, err := http.Get(apiUrl)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	body, _ := io.ReadAll(resp.Body)
+	searchResults := new(JackettSearchResult)
+	err = xml.Unmarshal(body, &searchResults)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return searchResults, nil
+}
+
+func (mov *JackettMovie) setSeeds() {
+	for _, attr := range mov.Props {
+		if attr.Name == "seeds" {
+			mov.Seeds, _ = strconv.Atoi(attr.Value)
 		}
 	}
-
-QLOOP:
-	for _, v := range d.VideoMap.Quality {
-		for _, mask := range v.Masks {
-			if strings.Contains(movie.Title, mask) {
-				movie.Quality = v.Name
-				break QLOOP
-			}
-		}
-	}
-
-CLOOP:
-	for _, v := range d.VideoMap.Container {
-		movie.Container = "AVC"
-		for _, mask := range v.Masks {
-			if strings.Contains(movie.Title, mask) {
-				movie.Container = v.Name
-				break CLOOP
-			}
-		}
-	}
-
-DLOOP:
-	for _, v := range d.VideoMap.DynamicRange {
-		movie.DynamicRange = "SDR"
-		for _, mask := range v.Masks {
-			if strings.Contains(movie.Title, mask) {
-				movie.DynamicRange = v.Name
-				break DLOOP
-			}
-		}
-	}
-
-	if meta.Length != 0 {
-		filmLength := meta.Length / 60
-		sizeMb := int(movie.Size) / 1048576
-		movie.Bitrate = sizeMb / filmLength
-	}
-
 }

@@ -3,9 +3,11 @@ package torrent
 import "movie-downloader-bot/internal/parser/meta"
 
 type Parser interface {
-	Find(meta.Movie) []Movie
+	Find(meta.Movie) Movies
 	GetById(id string) Movie
 }
+
+type Movies []Movie
 
 type Movie struct {
 	Meta         meta.Movie

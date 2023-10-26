@@ -28,16 +28,16 @@ func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser
 	}
 }
 
-func (c *Commander) HandleUpdate(update tgbotapi.Update) {
+func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	defer func() {
 		if panicValue := recover(); panicValue != nil {
-			log.Printf("recovered from panic: %v", panicValue)
+			log.Printf("Recovered from panic: %v", panicValue)
 		}
 	}()
 
 	if update.CallbackQuery != nil {
 		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Param is: %+v\n", []byte(update.CallbackQuery.Data)))
-		_, err := c.bot.Send(msg)
+		_, err := cmd.bot.Send(msg)
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -51,12 +51,13 @@ func (c *Commander) HandleUpdate(update tgbotapi.Update) {
 
 	switch update.Message.Command() {
 	case "start":
-		c.Start(update.Message)
+		cmd.Start(update.Message)
 	}
 
 	msgTxt := strings.ToLower(strings.Trim(update.Message.Text, " /"))
 
-	downloadRe := regexp.MustCompile(c.params.Commands.Download)
+	downloadRe := regexp.MustCompile(cmd.params.Commands.Download)
+	searchRe := regexp.MustCompile(cmd.params.Commands.Search)
 
 	switch {
 	case strings.Contains(msgTxt, "kinopoisk.ru/film"):
@@ -64,9 +65,9 @@ func (c *Commander) HandleUpdate(update tgbotapi.Update) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		movie := c.meta.GetByKpId(movieId)
+		movie := cmd.meta.GetByKpId(movieId)
 		fmt.Println(movie.NameRu)
-		res := c.torrent.Find(movie)
+		res := cmd.torrent.Find(movie)
 		for _, movie := range res {
 			fmt.Println(movie.Title)
 		}
@@ -75,22 +76,36 @@ func (c *Commander) HandleUpdate(update tgbotapi.Update) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		movie := c.meta.GetByKpId(movieId)
+		movie := cmd.meta.GetByKpId(movieId)
 		fmt.Println(movie.NameRu)
-		res := c.torrent.Find(movie)
+		res := cmd.torrent.Find(movie)
 		for _, movie := range res {
 			fmt.Println(movie.Title)
 		}
 	case downloadRe.MatchString(msgTxt):
 		title := string(downloadRe.ReplaceAll([]byte(msgTxt), []byte("")))
-		movies := c.meta.FindByTitle(title)
+		movies := cmd.meta.FindByTitle(title)
 		if len(movies) == 0 {
 			fmt.Println("Not found!")
 			return
 		}
 		movie := movies[0]
 		fmt.Println(movie.NameRu)
-		res := c.torrent.Find(movie)
+		res := cmd.torrent.Find(movie)
+		for _, movie := range res {
+			fmt.Println(movie.Title, "||| ", movie.Quality, " ", movie.Resolution, " ", movie.Container, " ", movie.DynamicRange, " ", movie.Bitrate)
+		}
+
+	case searchRe.MatchString(msgTxt):
+		title := string(downloadRe.ReplaceAll([]byte(msgTxt), []byte("")))
+		movies := cmd.meta.FindByTitle(title)
+		if len(movies) == 0 {
+			fmt.Println("Not found!")
+			return
+		}
+		movie := movies[0]
+		fmt.Println(movie.NameRu)
+		res := cmd.torrent.Find(movie)
 		for _, movie := range res {
 			fmt.Println(movie.Title, "||| ", movie.Quality, " ", movie.Resolution, " ", movie.Container, " ", movie.DynamicRange, " ", movie.Bitrate)
 		}
