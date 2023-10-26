@@ -90,7 +90,7 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 	return
 }
 
-func (prs *JackettParser) GetById(id string) (movie Movie) {
+func (prs *JackettParser) GetById(id int) (movie Movie) {
 	return
 }
 

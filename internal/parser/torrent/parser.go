@@ -4,7 +4,7 @@ import "movie-downloader-bot/internal/parser/meta"
 
 type Parser interface {
 	Find(meta.Movie) Movies
-	GetById(id string) Movie
+	GetById(id int) Movie
 }
 
 type Movies []Movie
