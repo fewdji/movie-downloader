@@ -7,7 +7,6 @@ import (
 	"log"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
-	"movie-downloader-bot/pkg/helper"
 	"net/http"
 	"net/url"
 	"os"
@@ -54,14 +53,17 @@ func NewJackettParser() *JackettParser {
 }
 
 func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
+	q := NewQuarier(metaMovie)
+	queries := q.GenerateQueries()
 
-	query := fmt.Sprintf("%s %s", metaMovie.NameRu, metaMovie.Year)
+	var searchResult JackettSearchResult
 
-	fmt.Println(query)
-
-	searchResult, err := prs.makeRequest(query, "all")
-	if err != nil {
-		log.Fatal(err)
+	for _, query := range queries {
+		resp, err := prs.makeRequest(query, "rutracker")
+		searchResult.JackettMovies = append(searchResult.JackettMovies, resp.JackettMovies...)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	for _, jackettMovie := range searchResult.JackettMovies {
@@ -84,21 +86,10 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 
 		torrentMovie.SetVideoProps()
 		torrentMovies = append(torrentMovies, torrentMovie)
-		torrentMovies.BaseFilter().NoRemux()
+		torrentMovies.BaseFilter()
 	}
 
 	return
-}
-
-func (prs *JackettParser) GetById(id int) (movie Movie) {
-	return
-}
-
-func (prs *JackettParser) Filter(movie *JackettMovie) bool {
-	if helper.ContainsAny(movie.Title, prs.params.VideoFilter.Exclude.BadQuality) {
-		return false
-	}
-	return true
 }
 
 func (prs *JackettParser) makeRequest(query string, tracker string) (result *JackettSearchResult, err error) {
@@ -119,7 +110,7 @@ func (prs *JackettParser) makeRequest(query string, tracker string) (result *Jac
 
 func (mov *JackettMovie) setSeeds() {
 	for _, attr := range mov.Props {
-		if attr.Name == "seeds" {
+		if attr.Name == "seeders" {
 			mov.Seeds, _ = strconv.Atoi(attr.Value)
 		}
 	}

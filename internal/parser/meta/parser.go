@@ -6,11 +6,11 @@ type Parser interface {
 }
 
 type Movie struct {
-	Id           int
-	Type         string
-	Completed    bool
-	NameRu       string
-	NameOriginal string
-	Year         int
-	Length       int
+	Id           int    `json:"id"`
+	Type         string `json:"type"`
+	Completed    bool   `json:"completed"`
+	NameRu       string `json:"name_ru"`
+	NameOriginal string `json:"name_original"`
+	Year         int    `json:"year"`
+	Length       int    `json:"length"`
 }

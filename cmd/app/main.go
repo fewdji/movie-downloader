@@ -39,10 +39,9 @@ func main() {
 	tParser := torrent.NewJackettParser()
 	commander := commands.NewCommander(bot, kpParser, tParser)
 
-	go MonitorTask()
+	//go MonitorTask()
 
 	for update := range updates {
-		log.Printf("%+v\n", update)
 		commander.HandleUpdate(update)
 	}
 }

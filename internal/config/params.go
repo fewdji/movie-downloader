@@ -9,7 +9,10 @@ import (
 
 type Params struct {
 	StaticText struct {
-		StartMsgTxt string `json:"start_msg"`
+		StartMsgTxt             string `json:"start_msg"`
+		MetaMovieNotFound       string `json:"meta_movie_not_found"`
+		MetaMovieSearchTitle    string `json:"meta_movie_search_title"`
+		TorrentMovieSearchTitle string `json:"torrent_movie_search_title"`
 	} `json:"static_text"`
 	Commands struct {
 		Download string `json:"download"`

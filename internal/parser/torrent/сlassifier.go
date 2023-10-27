@@ -68,7 +68,7 @@ func (mov *Movie) SetDynamicRange() {
 func (mov *Movie) SetBitrate() bool {
 	if mov.Meta.Length != 0 {
 		filmLength := mov.Meta.Length / 60
-		sizeMb := int(mov.Size) / 1048576
+		sizeMb := int(mov.Size) / 1024 * 1024
 		mov.Bitrate = sizeMb / filmLength
 		return true
 	}
