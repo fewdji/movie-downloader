@@ -8,8 +8,61 @@ import (
 	"strings"
 )
 
+func (movs *Movies) GetBest() Movie {
+	var best Movie
+	movs.BaseFilter().
+		NoSeries().
+		NoCollections().
+		WithDefinedVideoParams().
+		NoRemux().
+		MinSeeds(params.NewParams().VideoFilter.Limit.Auto.SeedsMin).
+		SizeLimits(params.NewParams().VideoFilter.Limit.Auto.SizeMin, params.NewParams().VideoFilter.Limit.Auto.SizeMax)
+
+	for _, mov := range *movs {
+		best = mov
+	}
+	return best
+}
+
 func (movs *Movies) BaseFilter() *Movies {
-	return movs.NoTrailers().NoBadQuality().NoBadFormats().NoDisks().NoStereo3D().NoOtherLanguages().NoSequels()
+	return movs.NoTrailers().
+		NoBadQuality().
+		NoBadFormats().
+		NoDisks().
+		NoStereo3D().
+		NoOtherLanguages().
+		NoSequels().
+		WithDefinedVideoParams().
+		MinSeeds(params.NewParams().VideoFilter.Limit.Manual.SeedsMin).
+		SizeLimits(params.NewParams().VideoFilter.Limit.Manual.SizeMin, params.NewParams().VideoFilter.Limit.Manual.SizeMax)
+}
+
+func (movs *Movies) WithDefinedVideoParams() *Movies {
+	for k, mov := range *movs {
+		if mov.Resolution == "" || mov.Quality == "" {
+			*movs = slices.Delete(*movs, k, k+1)
+		}
+	}
+	return movs
+}
+
+func (movs *Movies) MinSeeds(seedsNum int) *Movies {
+	for k, mov := range *movs {
+		if mov.Seeds < seedsNum {
+			*movs = slices.Delete(*movs, k, k+1)
+		}
+	}
+	return movs
+}
+
+func (movs *Movies) SizeLimits(min, max int) *Movies {
+	for k, mov := range *movs {
+		sizeMb := mov.Size / (1024 * 1024)
+		if (sizeMb < min && min != 0) || (sizeMb > max && max != 0) {
+			*movs = slices.Delete(*movs, k, k+1)
+		}
+	}
+	return movs
 }
 
 func (movs *Movies) NoSequels() *Movies {

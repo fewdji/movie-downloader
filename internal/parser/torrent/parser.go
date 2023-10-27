@@ -2,6 +2,13 @@ package torrent
 
 import "movie-downloader-bot/internal/parser/meta"
 
+const (
+	FILM_TYPE        = "FILM"
+	SERIES_TYPE      = "TV_SERIES"
+	MINI_SERIES_TYPE = "MINI_SERIES"
+	TV_SHOW_TYPE     = "TV_SHOW"
+)
+
 type Parser interface {
 	Find(meta.Movie) Movies
 }
@@ -21,4 +28,5 @@ type Movie struct {
 	DynamicRange string     `json:"dynamic_range"`
 	Container    string     `json:"container"`
 	Bitrate      int        `json:"bitrate"`
+	File         string     `json:"file"`
 }

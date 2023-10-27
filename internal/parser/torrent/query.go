@@ -9,7 +9,7 @@ type Querier struct {
 	Movie meta.Movie
 }
 
-func NewQuarier(mov meta.Movie) *Querier {
+func NewQuerier(mov meta.Movie) *Querier {
 	return &Querier{
 		Movie: mov,
 	}
@@ -29,4 +29,8 @@ func (q *Querier) GenerateQueries() []string {
 	}
 
 	return queries
+}
+
+func (q *Querier) GetBestTorrent() {
+
 }

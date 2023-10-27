@@ -63,6 +63,21 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 			res := cmd.torrent.Find(metaMovie)
 
+			println("emsptu")
+
+			best := res.GetBest()
+
+			if best.Size == 0 {
+				println("emptu")
+				return
+			}
+
+			repd := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("%s", best.Title))
+
+			cmd.bot.Send(repd)
+
+			return
+
 			var rows [][]tgbotapi.InlineKeyboardButton
 			for _, mov := range res {
 
@@ -84,11 +99,9 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 			cmd.bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
 
-			_, err = cmd.bot.Send(rep)
-			if err != nil {
-				log.Println(err)
-				return
-			}
+			cmd.bot.Send(rep)
+
+			return
 
 		case "torrent":
 			log.Println("Torrent callback!")

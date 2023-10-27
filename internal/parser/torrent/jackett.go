@@ -31,6 +31,7 @@ type JackettMovie struct {
 	Link      string `xml:"comments"`
 	Published string `xml:"pubDate"`
 	Size      int    `xml:"size"`
+	File      string `xml:"link"`
 	Props     []struct {
 		XMLName xml.Name
 		Name    string `xml:"name,attr"`
@@ -53,7 +54,7 @@ func NewJackettParser() *JackettParser {
 }
 
 func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
-	q := NewQuarier(metaMovie)
+	q := NewQuerier(metaMovie)
 	queries := q.GenerateQueries()
 
 	var searchResult JackettSearchResult
@@ -76,6 +77,7 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 			Link:         jackettMovie.Link,
 			Published:    jackettMovie.Published,
 			Size:         jackettMovie.Size,
+			File:         jackettMovie.File,
 			Seeds:        jackettMovie.Seeds,
 			Quality:      jackettMovie.Quality,
 			Resolution:   jackettMovie.Resolution,

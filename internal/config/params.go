@@ -37,6 +37,18 @@ type Params struct {
 			Collections    []string `json:"collections"`
 			Series         []string `json:"series"`
 		} `json:"exclude"`
+		Limit struct {
+			Auto struct {
+				SizeMin  int `json:"size_min"`
+				SizeMax  int `json:"size_max"`
+				SeedsMin int `json:"seeds_min"`
+			} `json:"auto"`
+			Manual struct {
+				SizeMin  int `json:"size_min"`
+				SizeMax  int `json:"size_max"`
+				SeedsMin int `json:"seeds_min"`
+			} `json:"manual"`
+		} `json:"limit"`
 	} `json:"video_filter"`
 	VideoMap struct {
 		Resolution []struct {
