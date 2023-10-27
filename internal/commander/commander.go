@@ -33,11 +33,11 @@ func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser
 }
 
 func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
-	defer func() {
-		if panicValue := recover(); panicValue != nil {
-			log.Printf("Recovered from panic: %v", panicValue)
-		}
-	}()
+	//defer func() {
+	//	if panicValue := recover(); panicValue != nil {
+	//		log.Printf("Recovered from panic: %v", panicValue)
+	//	}
+	//}()
 
 	if update.CallbackQuery != nil {
 
@@ -61,14 +61,17 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 			metaMovie := cmd.meta.GetByKpId(kpid)
 
-			res := cmd.torrent.Find(metaMovie)
+			if metaMovie.Length == 0 {
+				log.Println("No length on kp!")
+				return
+			}
 
-			println("emsptu")
+			res := cmd.torrent.Find(metaMovie)
 
 			best := res.GetBest()
 
-			if best.Size == 0 {
-				println("emptu")
+			if best == nil {
+				println("Not found on trackers!")
 				return
 			}
 

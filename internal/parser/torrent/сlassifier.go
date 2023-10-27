@@ -7,10 +7,10 @@ import (
 
 func (mov *Movie) SetVideoProps() {
 	mov.SetResolution()
-	mov.SetQuality()
-	mov.SetContainer()
 	mov.SetDynamicRange()
+	mov.SetContainer()
 	mov.SetBitrate()
+	mov.SetQuality()
 }
 
 func (mov *Movie) SetResolution() bool {
@@ -19,6 +19,7 @@ func (mov *Movie) SetResolution() bool {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
 				mov.Resolution = v.Name
+				mov.Preset += v.Name
 				return true
 			}
 		}
@@ -45,11 +46,13 @@ func (mov *Movie) SetContainer() {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
 				mov.Container = v.Name
+				mov.Preset += " " + v.Name
 				return
 			}
 		}
 	}
 	mov.Container = "AVC"
+	mov.Preset += " " + mov.Container
 }
 
 func (mov *Movie) SetDynamicRange() {
@@ -58,18 +61,70 @@ func (mov *Movie) SetDynamicRange() {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
 				mov.DynamicRange = v.Name
+				mov.Preset += " " + v.Name
 				return
 			}
 		}
 	}
 	mov.DynamicRange = "SDR"
+	mov.Preset += " " + mov.DynamicRange
 }
 
 func (mov *Movie) SetBitrate() bool {
-	if mov.Meta.Length != 0 {
+	if mov.Meta.Length != 0 && mov.Size != 0 {
 		filmLength := mov.Meta.Length / 60
-		sizeMb := int(mov.Size) / 1024 * 1024
+		sizeMb := mov.Size / (1024 * 1024)
 		mov.Bitrate = sizeMb / filmLength
+
+		if mov.Resolution == "" {
+			return false
+		}
+
+		//Optimal for FHD SDR AVC HB
+		calcBitrate := float64(params.NewParams().BitrateGoal)
+
+		switch mov.Resolution {
+		case "UHD":
+			calcBitrate *= 1.5
+		case "HD":
+			calcBitrate *= 0.5
+		case "MD":
+			calcBitrate *= 0.3
+		case "SD":
+			calcBitrate *= 0.15
+		}
+
+		if mov.Container == "HEVC" {
+			calcBitrate *= 0.8
+		}
+
+		if mov.DynamicRange != "SDR" {
+			calcBitrate *= 1.3
+		}
+
+		if mov.Bitrate == 0 {
+			return false
+		}
+
+		diffBitrate := 100 - ((mov.Bitrate * 100) / int(calcBitrate))
+
+		//println(mov.Title)
+		//println(mov.Preset, " ", mov.Quality)
+		//println("size: ", mov.Size/(1024*1024), " Mb")
+		//println("bitrate: ", mov.Bitrate, " Mb/Sec")
+		//println("calc: ", int(calcBitrate))
+		//println("diff: ", diffBitrate)
+		//println("-------------------")
+
+		switch {
+		case diffBitrate > 20:
+			mov.Preset += " LB"
+		case diffBitrate < -20:
+			mov.Preset += " HB"
+		default:
+			mov.Preset += " MB"
+		}
+
 		return true
 	}
 	return false

@@ -18,13 +18,7 @@ type Params struct {
 		Download string `json:"download"`
 		Search   string `json:"search"`
 	} `json:"commands"`
-	Preset struct {
-		Resolution string `json:"resolution"`
-		Hdr        string `json:"hdr"`
-		Container  string `json:"container"`
-		BitrateMin int    `json:"bitrate_min"`
-		BitrateMax int    `json:"bitrate_max"`
-	} `json:"preset"`
+	Presets     []string `json:"presets"`
 	VideoFilter struct {
 		Exclude struct {
 			Trailers       []string `json:"trailers"`
@@ -50,7 +44,8 @@ type Params struct {
 			} `json:"manual"`
 		} `json:"limit"`
 	} `json:"video_filter"`
-	VideoMap struct {
+	BitrateGoal int `json:"bitrate_goal"`
+	VideoMap    struct {
 		Resolution []struct {
 			Name  string   `json:"name"`
 			Masks []string `json:"masks"`

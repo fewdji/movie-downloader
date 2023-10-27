@@ -5,11 +5,11 @@ import (
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/pkg/helper"
 	"slices"
+	"strconv"
 	"strings"
 )
 
-func (movs *Movies) GetBest() Movie {
-	var best Movie
+func (movs *Movies) GetBest() *Movie {
 	movs.BaseFilter().
 		NoSeries().
 		NoCollections().
@@ -18,14 +18,75 @@ func (movs *Movies) GetBest() Movie {
 		MinSeeds(params.NewParams().VideoFilter.Limit.Auto.SeedsMin).
 		SizeLimits(params.NewParams().VideoFilter.Limit.Auto.SizeMin, params.NewParams().VideoFilter.Limit.Auto.SizeMax)
 
-	for _, mov := range *movs {
-		best = mov
+	var bests Movies
+	presets := params.NewParams().Presets
+
+	for _, preset := range presets {
+		for _, mov := range *movs {
+			print(mov.Title)
+			println(mov.Preset, " ", mov.Quality, " ", mov.Bitrate, " | ", mov.Size/(1024*1024))
+			println(preset)
+			if mov.Preset == preset {
+				bests = append(bests, mov)
+			}
+		}
+		if len(bests) != 0 {
+			break
+		}
 	}
-	return best
+
+	println(len(bests))
+
+	if len(bests) == 0 {
+		return nil
+	}
+
+	maxSizeKey := 0
+	for k, _ := range bests {
+		if bests[k].Size > bests[maxSizeKey].Size {
+			maxSizeKey = k
+		}
+	}
+
+	return &bests[maxSizeKey]
+}
+
+func (movs *Movies) matchTitle() *Movies {
+	for i, fl := 0, false; i < len(*movs); i++ {
+		mov := (*movs)[i]
+		nameRu, nameOrig := mov.Meta.NameRu, mov.Meta.NameOriginal
+		year := strconv.Itoa(mov.Meta.Year)
+		yearPlus := strconv.Itoa(mov.Meta.Year + 1)
+		yearMinus := strconv.Itoa(mov.Meta.Year - 1)
+
+		goodTitles := [][]string{
+			{nameRu, year},
+			{nameRu, nameOrig, yearPlus},
+			{nameRu, nameOrig, yearMinus},
+			{nameOrig, year},
+		}
+
+		if mov.Meta.Type != FILM_TYPE {
+			goodTitles = append(goodTitles, []string{nameRu, nameOrig})
+		}
+
+		fl = false
+		for _, gt := range goodTitles {
+			if helper.ContainsAll(mov.Title, gt) {
+				fl = true
+			}
+		}
+		if !fl {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
+		}
+	}
+	return movs
 }
 
 func (movs *Movies) BaseFilter() *Movies {
-	return movs.NoTrailers().
+	return movs.matchTitle().
+		NoTrailers().
 		NoBadQuality().
 		NoBadFormats().
 		NoDisks().
@@ -38,137 +99,106 @@ func (movs *Movies) BaseFilter() *Movies {
 }
 
 func (movs *Movies) WithDefinedVideoParams() *Movies {
-	for k, mov := range *movs {
-		if mov.Resolution == "" || mov.Quality == "" {
-			*movs = slices.Delete(*movs, k, k+1)
+	for i := 0; i < len(*movs); i++ {
+		if (*movs)[i].Resolution == "" || (*movs)[i].Quality == "" {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 		}
 	}
 	return movs
 }
 
 func (movs *Movies) MinSeeds(seedsNum int) *Movies {
-	for k, mov := range *movs {
-		if mov.Seeds < seedsNum {
-			*movs = slices.Delete(*movs, k, k+1)
+	for i := 0; i < len(*movs); i++ {
+		if (*movs)[i].Seeds < seedsNum {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 		}
 	}
 	return movs
 }
 
 func (movs *Movies) SizeLimits(min, max int) *Movies {
-	for k, mov := range *movs {
-		sizeMb := mov.Size / (1024 * 1024)
+	for i := 0; i < len(*movs); i++ {
+		sizeMb := (*movs)[i].Size / (1024 * 1024)
 		if (sizeMb < min && min != 0) || (sizeMb > max && max != 0) {
-			*movs = slices.Delete(*movs, k, k+1)
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 		}
 	}
 	return movs
 }
 
 func (movs *Movies) NoSequels() *Movies {
-	for k, mov := range *movs {
+	for i := 0; i < len(*movs); i++ {
 		sequels := []string{
-			mov.Meta.NameRu + ":",
+			(*movs)[i].Meta.NameRu + ":",
 		}
-		for i := 1; i < 13; i++ {
-			sequels = append(sequels, fmt.Sprintf("%s %d", mov.Meta.NameRu, i))
+		for k := 1; k < 13; k++ {
+			sequels = append(sequels, fmt.Sprintf("%s %d", (*movs)[i].Meta.NameRu, k))
 		}
-		if helper.ContainsAny(mov.Title, sequels) {
-			*movs = slices.Delete(*movs, k, k+1)
+		if helper.ContainsAny((*movs)[i].Title, sequels) {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 		}
 	}
 	return movs
 }
 
 func (movs *Movies) NoTrailers() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.Trailers) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.Trailers)
 }
 
 func (movs *Movies) NoBadQuality() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.BadQuality) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.BadQuality)
 }
 
 func (movs *Movies) NoBadFormats() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.BadFormats) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.BadFormats)
 }
 
 func (movs *Movies) NoRemux() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.Remux) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.Remux)
 }
 
 func (movs *Movies) NoOtherLanguages() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.OtherLanguages) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.OtherLanguages)
 }
 
 func (movs *Movies) NoStereo3D() *Movies {
 	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.Stereo3D) {
-			*movs = slices.Delete(*movs, k, k+1)
+	for i := 0; i < len(*movs); i++ {
+		println((*movs)[i].Title)
+		if helper.ContainsAny((*movs)[i].Title, exclude.Stereo3D) {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 			continue
 		}
-		if !strings.Contains(mov.Meta.NameRu, "3D") && !strings.Contains(mov.Meta.NameOriginal, "3D") && strings.Contains(mov.Title, "3D") {
-			*movs = slices.Delete(*movs, k, k+1)
+		if !strings.Contains((*movs)[i].Meta.NameRu, "3D") && !strings.Contains((*movs)[i].Meta.NameOriginal, "3D") && strings.Contains((*movs)[i].Title, "3D") {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 		}
 	}
 	return movs
 }
 
 func (movs *Movies) NoCollections() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.Collections) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.Collections)
 }
 
 func (movs *Movies) NoSeries() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.Series) {
-			*movs = slices.Delete(*movs, k, k+1)
-		}
-	}
-	return movs
+	return movs.remover(params.NewParams().VideoFilter.Exclude.Series)
 }
 
 func (movs *Movies) NoDisks() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
-	for k, mov := range *movs {
-		if helper.ContainsAny(mov.Title, exclude.Disks) {
-			*movs = slices.Delete(*movs, k, k+1)
+	return movs.remover(params.NewParams().VideoFilter.Exclude.Disks)
+}
+
+func (movs *Movies) remover(exclude []string) *Movies {
+	for i := 0; i < len(*movs); i++ {
+		if helper.ContainsAny((*movs)[i].Title, exclude) {
+			*movs = slices.Delete(*movs, i, i+1)
+			i--
 		}
 	}
 	return movs

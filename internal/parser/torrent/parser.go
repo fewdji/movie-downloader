@@ -29,4 +29,5 @@ type Movie struct {
 	Container    string     `json:"container"`
 	Bitrate      int        `json:"bitrate"`
 	File         string     `json:"file"`
+	Preset       string     `json:"preset"`
 }

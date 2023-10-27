@@ -9,29 +9,56 @@
     "download": "скачай|скачать|загрузи|загрузить",
     "search": "найди"
   },
-  "preset": {
-    "resolution": "UHD",
-    "hdr": "DV",
-    "container": "HEVC",
-    "bitrate_min": 7000,
-    "bitrate_max": 20000
-  },
+  "presets": [
+    "UHD DV HEVC HB",
+    "UHD DV AVC HB",
+    "UHD HDR HEVC HB",
+    "UHD HDR AVC HB",
+    "UHD SDR HEVC HB",
+    "UHD SDR AVC HB",
+    "UHD DV HEVC MB",
+    "UHD DV AVC MB",
+    "UHD HDR HEVC MB",
+    "UHD HDR AVC MB",
+    "UHD SDR HEVC MB",
+    "UHD SDR AVC MB",
+    "FHD DV HEVC HB",
+    "FHD DV AVC HB",
+    "FHD HDR HEVC HB",
+    "FHD HDR AVC HB",
+    "FHD SDR HEVC HB",
+    "FHD SDR AVC HB",
+    "FHD DV HEVC MB",
+    "FHD DV AVC MB",
+    "FHD HDR HEVC MB",
+    "FHD HDR AVC MB",
+    "FHD SDR HEVC MB",
+    "FHD SDR AVC MB",
+    "HD SDR HEVC HB",
+    "HD SDR AVC HB",
+    "HD SDR HEVC MB",
+    "HD SDR AVC MB",
+    "MD SDR AVC HB",
+    "MD SDR AVC MB",
+    "SD SDR AVC HB",
+    "SD SDR AVC MB"
+  ],
   "video_filter": {
     "exclude": {
       "trailers": ["трейлер", " тизер", "(тизер", "[тизер", "-тизер"],
       "bad_quality": ["camrip", " ts ", "(ts)", "hdts", "ts-avc", "Telesync", "Telecine", "VHSRip", " | AD"],
-      "bad_formats": ["[iPad] ", "КПК", "[VIDEO] ", " upscale", "(upscale", "[upscale", "-upscale"],
+      "bad_formats": ["[iPad] ", "КПК", "[VIDEO] ", "ATV3", "[ATV]", " upscale", "(upscale", "[upscale", "-upscale"],
       "disks": ["DVD9", "DVD5", "BR-DISK", "Blu-ray 1080", "1080p, 720p", " Blu-ray Disc", "Blu-ray (custom)", "Blu-ray EUR", "Blu-Ray от"],
       "remux": ["Remux"],
       "other_languages": ["[БЕЗ ПЕРЕВОДА]", " | UKR", "[UKR"],
-      "stereo3d":  ["3D-Video", "3D Video", "стереопара", "Anaglyph"],
+      "stereo_3d":  ["3D-Video", "3D Video", "стереопара", "Anaglyph"],
       "collections": ["Антология", "Коллекция", "Тридекалогия", "Додекалогия", "Ундекалогия", "Декалогия", "Ноналогия", "Окталогия", "Гепталогия", "Гексалогия", "Пенталогия", "Тетралогия", "Квадрология", "Трилогия", "Дилогия"],
-      "series": ["s0", "s01", "s2", "s02", "s3", "s03", "s4", "s04", "s5", "s05", "s6", "s06", "s7", "s07", "s8", "s08", "s9", "s09", "s10", "s11", "s12", "s13", "s14", "s15", "s16", " Сезон:", " Сезоны:"]
+      "series": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "s12", "s13", "s14", "s15", "s16", " Сезон:", " Сезоны:"]
     },
     "limit": {
       "auto": {
         "size_min": 1300,
-        "size_max": 50000,
+        "size_max": 70000,
         "seeds_min": 2
       },
       "manual": {
@@ -41,6 +68,7 @@
       }
     }
   },
+  "bitrate_goal": 4000,
   "video_map": {
     "resolution": [
       {"name": "UHD", "masks": ["2160p"]},
@@ -67,7 +95,7 @@
     ],
     "dynamic_range": [
       {"name": "DV", "masks": ["Dolby Vision"]},
-      {"name": "HDR", "masks": ["HDR"]}
+      {"name": "HDR", "masks": ["HDR ", "HDR,", "HDR)", "HDR]", "HDR10"]}
     ]
   }
 }

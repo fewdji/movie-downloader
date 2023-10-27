@@ -54,17 +54,31 @@ func NewJackettParser() *JackettParser {
 }
 
 func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
-	q := NewQuerier(metaMovie)
-	queries := q.GenerateQueries()
 
 	var searchResult JackettSearchResult
 
-	for _, query := range queries {
-		resp, err := prs.makeRequest(query, "rutracker")
-		searchResult.JackettMovies = append(searchResult.JackettMovies, resp.JackettMovies...)
+	trackers := []string{"rutracker", "kinozal"}
+
+	for _, tracker := range trackers {
+
+		searchF := metaMovie.NameRu
+		respF, err := prs.makeRequest(searchF, tracker)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		searchS := metaMovie.NameOriginal
+		if metaMovie.NameOriginal == "" {
+			searchS = metaMovie.NameRu + " " + strconv.Itoa(metaMovie.Year)
+		}
+		respS, err := prs.makeRequest(searchS, tracker)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
+		searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
+
 	}
 
 	for _, jackettMovie := range searchResult.JackettMovies {

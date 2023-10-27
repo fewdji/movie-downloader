@@ -79,6 +79,10 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 		log.Fatal(err)
 	}
 
+	if kpMovie.Length == nil {
+		return
+	}
+
 	metaMovie = Movie{
 		Id:           kpId,
 		Type:         kpMovie.Type,
