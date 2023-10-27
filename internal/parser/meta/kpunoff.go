@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 )
 
 type KpParser struct {
@@ -66,7 +67,6 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 		}
 		metaMovies = append(metaMovies, metaMovie)
 	}
-
 	return
 }
 
@@ -79,7 +79,7 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 		log.Fatal(err)
 	}
 
-	if kpMovie.Length == nil {
+	if kpMovie.Length == nil || kpMovie.Year == nil || kpMovie.NameRu == "" {
 		return
 	}
 
@@ -92,12 +92,13 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 		Length:       int(kpMovie.Length.(float64)),
 		Completed:    kpMovie.Completed,
 	}
-
 	return
 }
 
 func (p *KpParser) makeRequest(url string, result interface{}) (err error) {
-	client := &http.Client{}
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err

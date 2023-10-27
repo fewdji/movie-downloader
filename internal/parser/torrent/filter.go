@@ -23,9 +23,9 @@ func (movs *Movies) GetBest() *Movie {
 
 	for _, preset := range presets {
 		for _, mov := range *movs {
-			print(mov.Title)
-			println(mov.Preset, " ", mov.Quality, " ", mov.Bitrate, " | ", mov.Size/(1024*1024))
-			println(preset)
+			//print(mov.Title)
+			//println(mov.Preset, " ", mov.Quality, " ", mov.Bitrate, " | ", mov.Size/(1024*1024))
+			//println(preset)
 			if mov.Preset == preset {
 				bests = append(bests, mov)
 			}
@@ -35,7 +35,7 @@ func (movs *Movies) GetBest() *Movie {
 		}
 	}
 
-	println(len(bests))
+	//println(len(bests))
 
 	if len(bests) == 0 {
 		return nil
@@ -168,7 +168,6 @@ func (movs *Movies) NoOtherLanguages() *Movies {
 func (movs *Movies) NoStereo3D() *Movies {
 	exclude := params.NewParams().VideoFilter.Exclude
 	for i := 0; i < len(*movs); i++ {
-		println((*movs)[i].Title)
 		if helper.ContainsAny((*movs)[i].Title, exclude.Stereo3D) {
 			*movs = slices.Delete(*movs, i, i+1)
 			i--

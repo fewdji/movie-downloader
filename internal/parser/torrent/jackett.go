@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"io"
 	"log"
-	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 type JackettParser struct {
-	url    string
-	token  string
-	params *params.Params
+	url   string
+	token string
 }
 
 type JackettSearchResult struct {
@@ -47,9 +48,8 @@ type JackettMovie struct {
 
 func NewJackettParser() *JackettParser {
 	return &JackettParser{
-		url:    os.Getenv("JACKETT_API_URL"),
-		token:  os.Getenv("JACKETT_API_TOKEN"),
-		params: params.NewParams(),
+		url:   os.Getenv("JACKETT_API_URL"),
+		token: os.Getenv("JACKETT_API_TOKEN"),
 	}
 }
 
@@ -57,29 +57,49 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 
 	var searchResult JackettSearchResult
 
-	trackers := []string{"rutracker", "kinozal"}
+	var trackers []string
+	trackersEnv := os.Getenv("JACKETT_TRACKERS")
+	if trackersEnv == "" {
+		trackers = []string{"all"}
+	} else {
+		trackers = strings.Split(trackersEnv, ",")
+	}
 
+	var wg sync.WaitGroup
+	log.Println("Starting Jackett requests...")
+	wg.Add(len(trackers) * 2)
 	for _, tracker := range trackers {
+		tracker := tracker
+		go func() {
+			log.Println("Gorutine for Ru started for ", tracker)
+			searchF := metaMovie.NameRu
+			respF, err := prs.makeRequest(searchF, tracker)
+			if err != nil {
+				log.Fatal(err)
+			}
+			searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
+			println("Gorutin for Ru End for ", tracker)
+			defer wg.Done()
+		}()
 
-		searchF := metaMovie.NameRu
-		respF, err := prs.makeRequest(searchF, tracker)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		searchS := metaMovie.NameOriginal
-		if metaMovie.NameOriginal == "" {
-			searchS = metaMovie.NameRu + " " + strconv.Itoa(metaMovie.Year)
-		}
-		respS, err := prs.makeRequest(searchS, tracker)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
-		searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
+		go func() {
+			println("Gorutin for Orig started for ", tracker)
+			searchS := metaMovie.NameOriginal
+			if metaMovie.NameOriginal == "" {
+				searchS = metaMovie.NameRu + " " + strconv.Itoa(metaMovie.Year)
+			}
+			respS, err := prs.makeRequest(searchS, tracker)
+			if err != nil {
+				log.Fatal(err)
+			}
+			searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
+			println("Gorutin for Orig End for ", tracker)
+			defer wg.Done()
+		}()
 
 	}
+	wg.Wait()
+	println("End process")
 
 	for _, jackettMovie := range searchResult.JackettMovies {
 		jackettMovie.setSeeds()
@@ -110,7 +130,10 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 
 func (prs *JackettParser) makeRequest(query string, tracker string) (result *JackettSearchResult, err error) {
 	apiUrl := fmt.Sprintf("%s/%s/results/torznab/api?apikey=%s&t=search&q=%s", prs.url, tracker, prs.token, url.QueryEscape(query))
-	resp, err := http.Get(apiUrl)
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.Get(apiUrl)
 	if err != nil {
 		log.Println(err)
 		return nil, err
