@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"movie-downloader-bot/internal/parser/torrent"
-	qbt "movie-downloader-bot/pkg/qbittorrent"
+	"movie-downloader-bot/pkg/qbittorrent"
 	"os"
 )
 
@@ -13,17 +13,11 @@ type Qbittorrent struct {
 }
 
 func NewQbittorrent() *Qbittorrent {
-
-	host := os.Getenv("QBT_HOST")
-	if os.Getenv("QBT_PORT") != "" {
-		host += ":" + os.Getenv("QBT_PORT")
-	}
-	qb := qbt.NewClient(host)
+	qb := qbt.NewClient(os.Getenv("QBT_HOST"))
 	err := qb.Login(os.Getenv("QBT_USERNAME"), os.Getenv("QBT_PASSWORD"))
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
-
 	return &Qbittorrent{
 		client: qb,
 	}
@@ -51,7 +45,6 @@ func (q *Qbittorrent) GetTorrents() error {
 		}
 	}
 	return nil
-
 }
 
 func (q *Qbittorrent) Download(movie *torrent.Movie) error {

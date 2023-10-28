@@ -70,6 +70,7 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 	for _, tracker := range trackers {
 		tracker := tracker
 		go func() {
+			defer wg.Done()
 			log.Println("Gorutine for Ru started for ", tracker)
 			searchF := metaMovie.NameRu
 			respF, err := prs.makeRequest(searchF, tracker)
@@ -79,10 +80,10 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
 			log.Println("Gorutin for Ru End for ", tracker)
-			defer wg.Done()
 		}()
 
 		go func() {
+			defer wg.Done()
 			log.Println("Gorutin for Orig started for ", tracker)
 			searchS := metaMovie.NameOriginal
 			if metaMovie.NameOriginal == "" {
@@ -95,7 +96,6 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
 			log.Println("Gorutin for Orig End for ", tracker)
-			defer wg.Done()
 		}()
 
 	}
