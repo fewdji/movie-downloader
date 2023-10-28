@@ -78,12 +78,12 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
-			println("Gorutin for Ru End for ", tracker)
+			log.Println("Gorutin for Ru End for ", tracker)
 			defer wg.Done()
 		}()
 
 		go func() {
-			println("Gorutin for Orig started for ", tracker)
+			log.Println("Gorutin for Orig started for ", tracker)
 			searchS := metaMovie.NameOriginal
 			if metaMovie.NameOriginal == "" {
 				searchS = metaMovie.NameRu + " " + strconv.Itoa(metaMovie.Year)
@@ -94,13 +94,13 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
-			println("Gorutin for Orig End for ", tracker)
+			log.Println("Gorutin for Orig End for ", tracker)
 			defer wg.Done()
 		}()
 
 	}
 	wg.Wait()
-	println("End process")
+	log.Println("End process")
 
 	for _, jackettMovie := range searchResult.JackettMovies {
 		jackettMovie.setSeeds()

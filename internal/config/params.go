@@ -68,7 +68,7 @@ type Params struct {
 var instance *Params
 var once sync.Once
 
-func NewParams() *Params {
+func Get() *Params {
 	once.Do(func() {
 		instance = &Params{}
 		paramFile, err := os.Open("configs/params.json")

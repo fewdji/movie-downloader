@@ -16,7 +16,6 @@ type Commander struct {
 	bot     *tgbotapi.BotAPI
 	meta    meta.Parser
 	torrent torrent.Parser
-	params  *params.Params
 	cache   *cache.Cache
 }
 
@@ -25,7 +24,6 @@ func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser
 		bot:     bot,
 		meta:    meta,
 		torrent: torrent,
-		params:  params.NewParams(),
 		cache:   cache.New(15*time.Minute, 30*time.Minute),
 	}
 }
@@ -78,8 +76,8 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	}
 
 	msgTxt := strings.ToLower(strings.Trim(update.Message.Text, " /"))
-	downloadRe := regexp.MustCompile(cmd.params.Commands.Download)
-	searchRe := regexp.MustCompile(cmd.params.Commands.Search)
+	downloadRe := regexp.MustCompile(params.Get().Commands.Download)
+	searchRe := regexp.MustCompile(params.Get().Commands.Search)
 
 	// Handle text commands
 	switch {

@@ -5,6 +5,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/patrickmn/go-cache"
 	"log"
+	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/torrent"
 	"movie-downloader-bot/pkg/helper"
 	"regexp"
@@ -25,7 +26,7 @@ func (cmd *Commander) DownloadByLinkOrId(inputMessage *tgbotapi.Message, msgTxt 
 	metaMovie := cmd.meta.GetByKpId(movieId)
 	if metaMovie == nil {
 		log.Println("DownloadMovieByLinkOrId: metaMovie not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, cmd.params.StaticText.MetaMovieNotFound)
+		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
 		rep.ReplyToMessageID = inputMessage.MessageID
 		cmd.bot.Send(rep)
 		return
@@ -56,7 +57,7 @@ func (cmd *Commander) SearchOrDownloadByTitle(inputMessage *tgbotapi.Message, ms
 
 	if len(metaMovies) == 0 {
 		log.Println("SearchOrDownloadByTitle: metaMovies not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, cmd.params.StaticText.MetaMovieNotFound)
+		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
 		rep.ReplyToMessageID = inputMessage.MessageID
 		cmd.bot.Send(rep)
 		return
@@ -72,7 +73,7 @@ func (cmd *Commander) SearchOrDownloadByTitle(inputMessage *tgbotapi.Message, ms
 		}
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s (%d)", mov.NameRu, mov.Year), fmt.Sprintf("%s|%d", cbData, mov.Id))))
 	}
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, cmd.params.StaticText.MetaMovieSearchTitle)
+	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieSearchTitle)
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
 	// TODO: delete msg with movie list
@@ -92,7 +93,7 @@ func (cmd *Commander) SearchByLinkOrId(inputMessage *tgbotapi.Message, msgTxt st
 	metaMovie := cmd.meta.GetByKpId(movieId)
 	if metaMovie == nil {
 		log.Println("SearchByLinkOrId: metaMovie not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, cmd.params.StaticText.MetaMovieNotFound)
+		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
 		rep.ReplyToMessageID = inputMessage.MessageID
 		cmd.bot.Send(rep)
 		return
@@ -124,7 +125,7 @@ func (cmd *Commander) SearchByLinkOrId(inputMessage *tgbotapi.Message, msgTxt st
 	}
 
 	// TODO: check list limits, filter the same, sort by size
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(cmd.params.StaticText.TorrentMovieSearchTitle, len(res)))
+	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, len(res)))
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
 	cmd.bot.Send(tgbotapi.NewDeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID))

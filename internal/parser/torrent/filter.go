@@ -15,11 +15,11 @@ func (movs *Movies) GetBest() *Movie {
 		NoCollections().
 		WithDefinedVideoParams().
 		NoRemux().
-		MinSeeds(params.NewParams().VideoFilter.Limit.Auto.SeedsMin).
-		SizeLimits(params.NewParams().VideoFilter.Limit.Auto.SizeMin, params.NewParams().VideoFilter.Limit.Auto.SizeMax)
+		MinSeeds(params.Get().VideoFilter.Limit.Auto.SeedsMin).
+		SizeLimits(params.Get().VideoFilter.Limit.Auto.SizeMin, params.Get().VideoFilter.Limit.Auto.SizeMax)
 
 	var bests Movies
-	presets := params.NewParams().Presets
+	presets := params.Get().Presets
 
 	for _, preset := range presets {
 		for _, mov := range *movs {
@@ -94,8 +94,8 @@ func (movs *Movies) BaseFilter() *Movies {
 		NoOtherLanguages().
 		NoSequels().
 		WithDefinedVideoParams().
-		MinSeeds(params.NewParams().VideoFilter.Limit.Manual.SeedsMin).
-		SizeLimits(params.NewParams().VideoFilter.Limit.Manual.SizeMin, params.NewParams().VideoFilter.Limit.Manual.SizeMax)
+		MinSeeds(params.Get().VideoFilter.Limit.Manual.SeedsMin).
+		SizeLimits(params.Get().VideoFilter.Limit.Manual.SizeMin, params.Get().VideoFilter.Limit.Manual.SizeMax)
 }
 
 func (movs *Movies) WithDefinedVideoParams() *Movies {
@@ -146,27 +146,27 @@ func (movs *Movies) NoSequels() *Movies {
 }
 
 func (movs *Movies) NoTrailers() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.Trailers)
+	return movs.remover(params.Get().VideoFilter.Exclude.Trailers)
 }
 
 func (movs *Movies) NoBadQuality() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.BadQuality)
+	return movs.remover(params.Get().VideoFilter.Exclude.BadQuality)
 }
 
 func (movs *Movies) NoBadFormats() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.BadFormats)
+	return movs.remover(params.Get().VideoFilter.Exclude.BadFormats)
 }
 
 func (movs *Movies) NoRemux() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.Remux)
+	return movs.remover(params.Get().VideoFilter.Exclude.Remux)
 }
 
 func (movs *Movies) NoOtherLanguages() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.OtherLanguages)
+	return movs.remover(params.Get().VideoFilter.Exclude.OtherLanguages)
 }
 
 func (movs *Movies) NoStereo3D() *Movies {
-	exclude := params.NewParams().VideoFilter.Exclude
+	exclude := params.Get().VideoFilter.Exclude
 	for i := 0; i < len(*movs); i++ {
 		if helper.ContainsAny((*movs)[i].Title, exclude.Stereo3D) {
 			*movs = slices.Delete(*movs, i, i+1)
@@ -182,15 +182,15 @@ func (movs *Movies) NoStereo3D() *Movies {
 }
 
 func (movs *Movies) NoCollections() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.Collections)
+	return movs.remover(params.Get().VideoFilter.Exclude.Collections)
 }
 
 func (movs *Movies) NoSeries() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.Series)
+	return movs.remover(params.Get().VideoFilter.Exclude.Series)
 }
 
 func (movs *Movies) NoDisks() *Movies {
-	return movs.remover(params.NewParams().VideoFilter.Exclude.Disks)
+	return movs.remover(params.Get().VideoFilter.Exclude.Disks)
 }
 
 func (movs *Movies) remover(exclude []string) *Movies {

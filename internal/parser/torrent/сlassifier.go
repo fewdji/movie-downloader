@@ -14,7 +14,7 @@ func (mov *Movie) SetVideoProps() {
 }
 
 func (mov *Movie) SetResolution() bool {
-	resolutions := params.NewParams().VideoMap.Resolution
+	resolutions := params.Get().VideoMap.Resolution
 	for _, v := range resolutions {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
@@ -28,7 +28,7 @@ func (mov *Movie) SetResolution() bool {
 }
 
 func (mov *Movie) SetQuality() bool {
-	qualities := params.NewParams().VideoMap.Quality
+	qualities := params.Get().VideoMap.Quality
 	for _, v := range qualities {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
@@ -41,7 +41,7 @@ func (mov *Movie) SetQuality() bool {
 }
 
 func (mov *Movie) SetContainer() {
-	containers := params.NewParams().VideoMap.Container
+	containers := params.Get().VideoMap.Container
 	for _, v := range containers {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
@@ -56,7 +56,7 @@ func (mov *Movie) SetContainer() {
 }
 
 func (mov *Movie) SetDynamicRange() {
-	ranges := params.NewParams().VideoMap.DynamicRange
+	ranges := params.Get().VideoMap.DynamicRange
 	for _, v := range ranges {
 		for _, mask := range v.Masks {
 			if strings.Contains(mov.Title, mask) {
@@ -81,8 +81,9 @@ func (mov *Movie) SetBitrate() bool {
 		}
 
 		//Optimal for FHD SDR AVC HB
-		calcBitrate := float64(params.NewParams().BitrateGoal)
+		calcBitrate := float64(params.Get().BitrateGoal)
 
+		// TODO: move out ratio values to params
 		switch mov.Resolution {
 		case "UHD":
 			calcBitrate *= 1.5
