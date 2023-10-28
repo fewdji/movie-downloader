@@ -1,6 +1,10 @@
 package helper
 
-import "strings"
+import (
+	"hash/fnv"
+	"strconv"
+	"strings"
+)
 
 func ContainsAny(s string, contains []string) bool {
 	for _, c := range contains {
@@ -18,4 +22,10 @@ func ContainsAll(s string, contains []string) bool {
 		}
 	}
 	return true
+}
+
+func Hash(s string) string {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return strconv.Itoa(int(h.Sum32()))
 }

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/patrickmn/go-cache"
 	"log"
@@ -9,7 +8,6 @@ import (
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -39,102 +37,33 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	//	}
 	//}()
 
+	// Handle callbacks
 	if update.CallbackQuery != nil {
 
 		clbk := strings.Split(update.CallbackQuery.Data, "|")
-
 		cmdName := clbk[0]
 
 		println(cmdName)
+
 		switch cmdName {
-		case "kpid":
+		case "metamovie_download":
+			log.Println("Download callback!")
 			if len(clbk) != 2 {
 				log.Println("No kpid!")
 				return
 			}
+			cmd.DownloadByLinkOrId(update.CallbackQuery.Message, clbk[1], true)
 
-			kpid, err := strconv.Atoi(clbk[1])
-			if err != nil {
-				log.Println("Not int!")
-				return
-			}
-
-			metaMovie := cmd.meta.GetByKpId(kpid)
-
-			if metaMovie.Length == 0 {
-				log.Println("No length on kp!")
-				return
-			}
-
-			res := cmd.torrent.Find(metaMovie)
-
-			best := res.GetBest()
-
-			if best == nil {
-				println("Not found on trackers!")
-				return
-			}
-
-			repd := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("%s", best.Title))
-
-			cmd.bot.Send(repd)
-
-			return
-
-			var rows [][]tgbotapi.InlineKeyboardButton
-			for _, mov := range res {
-
-				cmd.cache.Set(mov.Link, mov, cache.DefaultExpiration)
-
-				rows = append(rows,
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(
-							strings.Replace(
-								strings.Replace(
-									fmt.Sprintf("%s %s %s %s [%.1fG] (%d)", mov.Quality, mov.Resolution, mov.Container, mov.DynamicRange, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds),
-									"AVC ", "", 1),
-								"SDR ", "", 1),
-							fmt.Sprintf("torrent|%s", mov.Link))))
-			}
-
-			rep := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(cmd.params.StaticText.TorrentMovieSearchTitle, len(res)))
-			rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-
-			cmd.bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
-
-			cmd.bot.Send(rep)
-
-			return
-
-		case "torrent":
+		case "metamovie_torrents":
 			log.Println("Torrent callback!")
 			if len(clbk) != 2 {
 				log.Fatal("No kpid!")
 				return
 			}
-
-			key := clbk[1]
-
-			mov, found := cmd.cache.Get(key)
-			if !found {
-				log.Fatal("Cache not found!")
-				return
-			}
-
-			m := mov.(torrent.Movie)
-
-			cmd.bot.Send(tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID))
-
-			rep := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, m.Title)
-			cmd.bot.Send(rep)
-
-			return
-
+			cmd.SearchByLinkOrId(update.CallbackQuery.Message, clbk[1], true)
 		default:
 			log.Println("Unknown callback!")
-			return
 		}
-
 		return
 	}
 
@@ -142,78 +71,28 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 		return
 	}
 
+	// Handle static commands
 	switch update.Message.Command() {
 	case "start":
 		cmd.Start(update.Message)
 	}
 
 	msgTxt := strings.ToLower(strings.Trim(update.Message.Text, " /"))
-
 	downloadRe := regexp.MustCompile(cmd.params.Commands.Download)
 	searchRe := regexp.MustCompile(cmd.params.Commands.Search)
 
+	// Handle text commands
 	switch {
 	case strings.Contains(msgTxt, "kinopoisk.ru/film"):
-		movieId, err := strconv.Atoi(msgTxt[strings.LastIndex(msgTxt, "/")+1:])
-		if err != nil {
-			log.Fatal(err)
-		}
-		movie := cmd.meta.GetByKpId(movieId)
-		fmt.Println(movie.NameRu)
-		res := cmd.torrent.Find(movie)
-		for _, movie := range res {
-			fmt.Println(movie.Title)
-		}
+		cmd.DownloadByLinkOrId(update.Message, msgTxt, false)
+
 	case strings.Contains(msgTxt, "kinopoisk.ru/series"):
-		movieId, err := strconv.Atoi(msgTxt[strings.LastIndex(msgTxt, "/")+1:])
-		if err != nil {
-			log.Fatal(err)
-		}
-		movie := cmd.meta.GetByKpId(movieId)
-		fmt.Println(movie.NameRu)
-		res := cmd.torrent.Find(movie)
-		for _, movie := range res {
-			fmt.Println(movie.Title)
-		}
+		cmd.SearchByLinkOrId(update.Message, msgTxt, false)
+
 	case downloadRe.MatchString(msgTxt):
-		title := string(downloadRe.ReplaceAll([]byte(msgTxt), []byte("")))
-		movies := cmd.meta.FindByTitle(title)
-		if len(movies) == 0 {
-			fmt.Println("MetaFilm not found!")
-			return
-		}
-		movie := movies[0]
-		fmt.Println(movie.NameRu)
-		res := cmd.torrent.Find(movie)
-		for _, movie := range res {
-			fmt.Println(movie.Title, "||| ", movie.Quality, " ", movie.Resolution, " ", movie.Container, " ", movie.DynamicRange, " ", movie.Bitrate)
-		}
+		cmd.SearchOrDownloadByTitle(update.Message, msgTxt, downloadRe, true)
 
-		/*
-			Search movie or series command
-		*/
 	case searchRe.MatchString(msgTxt):
-		title := string(searchRe.ReplaceAll([]byte(msgTxt), []byte("")))
-		metaMovies := cmd.meta.FindByTitle(title)
-
-		if len(metaMovies) == 0 {
-			fmt.Println("MetaFilm not found!")
-			rep := tgbotapi.NewMessage(update.Message.Chat.ID, cmd.params.StaticText.MetaMovieNotFound)
-			rep.ReplyToMessageID = update.Message.MessageID
-			cmd.bot.Send(rep)
-			return
-		}
-
-		var rows [][]tgbotapi.InlineKeyboardButton
-		for _, mov := range metaMovies {
-			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s (%d)", mov.NameRu, mov.Year), fmt.Sprintf("kpid|%d", mov.Id))))
-		}
-
-		rep := tgbotapi.NewMessage(update.Message.Chat.ID, cmd.params.StaticText.MetaMovieSearchTitle)
-		rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-
-		cmd.bot.Send(rep)
-
+		cmd.SearchOrDownloadByTitle(update.Message, msgTxt, searchRe, false)
 	}
-
 }

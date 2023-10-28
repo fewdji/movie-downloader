@@ -49,7 +49,8 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 
 	err := p.makeRequest(apiUrl, &kpSearchResult)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil
 	}
 
 	for _, kpMovie := range kpSearchResult.Movies {
@@ -70,7 +71,7 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 	return
 }
 
-func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
+func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
 	kpMovie := new(KpMovie)
@@ -80,10 +81,10 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie Movie) {
 	}
 
 	if kpMovie.Length == nil || kpMovie.Year == nil || kpMovie.NameRu == "" {
-		return
+		return nil
 	}
 
-	metaMovie = Movie{
+	metaMovie = &Movie{
 		Id:           kpId,
 		Type:         kpMovie.Type,
 		NameRu:       kpMovie.NameRu,
@@ -120,5 +121,5 @@ func (p *KpParser) makeRequest(url string, result interface{}) (err error) {
 		return err
 	}
 
-	return
+	return nil
 }

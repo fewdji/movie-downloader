@@ -53,8 +53,7 @@ func NewJackettParser() *JackettParser {
 	}
 }
 
-func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
-
+func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 	var searchResult JackettSearchResult
 
 	var trackers []string
@@ -75,7 +74,8 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 			searchF := metaMovie.NameRu
 			respF, err := prs.makeRequest(searchF, tracker)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
 			println("Gorutin for Ru End for ", tracker)
@@ -90,7 +90,8 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 			}
 			respS, err := prs.makeRequest(searchS, tracker)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
 			println("Gorutin for Orig End for ", tracker)
@@ -105,7 +106,7 @@ func (prs *JackettParser) Find(metaMovie meta.Movie) (torrentMovies Movies) {
 		jackettMovie.setSeeds()
 
 		torrentMovie := Movie{
-			Meta:         metaMovie,
+			Meta:         *metaMovie,
 			Title:        jackettMovie.Title,
 			Tracker:      jackettMovie.Tracker,
 			Link:         jackettMovie.Link,
@@ -142,7 +143,8 @@ func (prs *JackettParser) makeRequest(query string, tracker string) (result *Jac
 	searchResults := new(JackettSearchResult)
 	err = xml.Unmarshal(body, &searchResults)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil, err
 	}
 	return searchResults, nil
 }
