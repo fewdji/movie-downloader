@@ -1,6 +1,9 @@
 package torrent
 
-import "movie-downloader-bot/internal/parser/meta"
+import (
+	"encoding/json"
+	"movie-downloader-bot/internal/parser/meta"
+)
 
 const (
 	FILM_TYPE        = "FILM"
@@ -10,7 +13,7 @@ const (
 )
 
 type Parser interface {
-	Find(*meta.Movie) Movies
+	Find(meta *meta.Movie) Movies
 }
 
 type Movies []Movie
@@ -30,4 +33,15 @@ type Movie struct {
 	Bitrate      int        `json:"bitrate"`
 	File         string     `json:"file"`
 	Preset       string     `json:"preset"`
+}
+
+func (movie Movie) MarshalBinary() ([]byte, error) {
+	return json.Marshal(movie)
+}
+
+func (movie *Movie) UnmarshalBinary(data []byte) error {
+	if err := json.Unmarshal(data, &movie); err != nil {
+		return err
+	}
+	return nil
 }

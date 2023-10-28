@@ -31,8 +31,8 @@ func main() {
 
 	kpParser := meta.NewKpParser()
 	tParser := torrent.NewJackettParser()
-	tClient := client.NewQbittorrent()
-	commander := commands.NewCommander(bot, kpParser, tParser, tClient)
+	client := client.NewQbittorrent()
+	commander := commands.NewCommander(bot, kpParser, tParser, client)
 
 	//tasker := tasks.NewTasker()
 	//go tasker.Monitor()

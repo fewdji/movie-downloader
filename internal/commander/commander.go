@@ -1,33 +1,40 @@
 package commands
 
 import (
+	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/patrickmn/go-cache"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"movie-downloader-bot/internal/client"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
+	"os"
 	"regexp"
 	"strings"
-	"time"
 )
 
 type Commander struct {
 	bot     *tgbotapi.BotAPI
 	meta    meta.Parser
 	torrent torrent.Parser
-	cache   *cache.Cache
+	cache   *redis.Client
 	client  client.Client
+	ctx     context.Context
 }
 
 func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client) *Commander {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     os.Getenv("REDIS_HOST"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+	})
 	return &Commander{
 		bot:     bot,
 		meta:    meta,
 		torrent: torrent,
 		client:  client,
-		cache:   cache.New(15*time.Minute, 30*time.Minute),
+		cache:   rdb,
+		ctx:     context.Background(),
 	}
 }
 
@@ -62,6 +69,15 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 				return
 			}
 			cmd.SearchByLinkOrId(update.CallbackQuery.Message, clbk[1], true)
+
+		case "movie_show":
+			log.Println("Movie show callback!")
+			if len(clbk) != 2 {
+				log.Println("No cache id!")
+				return
+			}
+			cmd.ShowMovie(update.CallbackQuery.Message, clbk[1])
+
 		default:
 			log.Println("Unknown callback!")
 		}
