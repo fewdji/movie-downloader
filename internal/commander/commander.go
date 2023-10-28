@@ -4,6 +4,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/patrickmn/go-cache"
 	"log"
+	"movie-downloader-bot/internal/client"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
@@ -17,13 +18,15 @@ type Commander struct {
 	meta    meta.Parser
 	torrent torrent.Parser
 	cache   *cache.Cache
+	client  client.Client
 }
 
-func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser) *Commander {
+func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client) *Commander {
 	return &Commander{
 		bot:     bot,
 		meta:    meta,
 		torrent: torrent,
+		client:  client,
 		cache:   cache.New(15*time.Minute, 30*time.Minute),
 	}
 }

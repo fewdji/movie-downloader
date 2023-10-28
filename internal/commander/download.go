@@ -46,6 +46,14 @@ func (cmd *Commander) DownloadByLinkOrId(inputMessage *tgbotapi.Message, msgTxt 
 	}
 
 	// TODO: realise downloading torrents
+
+	err = cmd.client.Download(best)
+
+	if err != nil {
+		// TODO: msg about error
+		return
+	}
+
 	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Качаю %s (%.2f Gb) с %s", best.Title, float64(best.Size)/float64(1024*1024*1024), best.Tracker))
 	rep.ReplyToMessageID = inputMessage.MessageID
 	cmd.bot.Send(rep)

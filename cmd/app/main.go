@@ -4,10 +4,10 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"log"
+	"movie-downloader-bot/internal/client"
 	"movie-downloader-bot/internal/commander"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
-	tasks "movie-downloader-bot/internal/tasker"
 	"os"
 	"strconv"
 )
@@ -31,10 +31,11 @@ func main() {
 
 	kpParser := meta.NewKpParser()
 	tParser := torrent.NewJackettParser()
-	commander := commands.NewCommander(bot, kpParser, tParser)
+	tClient := client.NewQbittorrent()
+	commander := commands.NewCommander(bot, kpParser, tParser, tClient)
 
-	tasker := tasks.NewTasker()
-	go tasker.Monitor()
+	//tasker := tasks.NewTasker()
+	//go tasker.Monitor()
 
 	for update := range updates {
 		commander.HandleUpdate(update)
