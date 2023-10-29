@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"movie-downloader-bot/internal/parser/torrent"
-	"movie-downloader-bot/pkg/qbittorrent"
+	qbt "movie-downloader-bot/pkg/qbittorrent"
 	"os"
 )
 
@@ -23,28 +23,68 @@ func NewQbittorrent() *Qbittorrent {
 	}
 }
 
-func (q *Qbittorrent) GetTorrents() error {
-	torrents, err := q.client.Torrents(qbt.TorrentsOptions{})
-	if err != nil {
-		log.Println(err)
-		return err
-	} else {
-		if len(torrents) > 0 {
-			log.Println(len(torrents))
-			for _, t := range torrents {
-				log.Println(t.Name, t.Hash, t.State)
-				//err := qb.PauseOne(t.Hash)
-				_, err := q.client.ResumeOne(t.Hash)
-				if err != nil {
-					log.Println(err)
-				}
-			}
-
-		} else {
-			fmt.Println("No torrents found")
+func (q *Qbittorrent) Show(hash string) *Torrent {
+	torrents := *q.List()
+	if len(torrents) == 0 {
+		log.Println("No torrents!")
+		return nil
+	}
+	for k, t := range torrents {
+		if t.Hash[0:32] == hash {
+			return &torrents[k]
 		}
 	}
 	return nil
+}
+
+func (q *Qbittorrent) List() *Torrents {
+	qtorrents, err := q.client.Torrents(qbt.TorrentsOptions{})
+
+	log.Println(qtorrents)
+
+	newTorrents := Torrents{}
+
+	if err != nil {
+		log.Println("Can't get torrents:", err)
+		return nil
+	} else {
+		if len(qtorrents) > 0 {
+			log.Println(len(qtorrents))
+			for _, t := range qtorrents {
+
+				eta := int(t.Eta)
+				if eta == 8640000 {
+					eta = 0
+				}
+
+				tor := Torrent{
+					Title:    t.Name,
+					Hash:     t.Hash,
+					State:    t.State,
+					Speed:    int(t.Dlspeed),
+					Progress: float64(t.Downloaded*100) / float64(t.Size),
+					Category: t.Category,
+					Size:     int(t.Size),
+					Seeds:    int(t.NumSeeds),
+					Eta:      eta,
+				}
+
+				newTorrents = append(newTorrents, tor)
+
+				//log.Println(t.Name, t.Hash, t.State)
+
+				//err := qb.PauseOne(t.Hash)
+				//_, err := q.client.ResumeOne(t.Hash)
+				//if err != nil {
+				//	log.Println(err)
+				//}
+			}
+			return &newTorrents
+		} else {
+			fmt.Println("No torrents found")
+			return &newTorrents
+		}
+	}
 }
 
 func (q *Qbittorrent) Download(movie *torrent.Movie, category string) error {

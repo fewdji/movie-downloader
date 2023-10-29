@@ -79,6 +79,9 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 		case "dl_f", "dl_s", "dl_t", "dl_w":
 			cmd.DownloadMovie(update.CallbackQuery.Message, cmdData)
 
+		case "t_sh":
+			cmd.ShowTorrent(update.CallbackQuery.Message, cmdData)
+
 		default:
 			log.Println("Unknown callback:", cmdData.Command)
 		}
@@ -100,12 +103,14 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	switch update.Message.Command() {
 	case "start":
 		cmd.Start(update.Message)
+		return
 	}
 
 	msgTxt := strings.ToLower(update.Message.Text)
 	cmdData := CommandData{Key: msgTxt}
 	downloadRe := regexp.MustCompile(params.Get().Commands.Download)
 	searchRe := regexp.MustCompile(params.Get().Commands.Search)
+	torrentsRe := regexp.MustCompile(params.Get().Commands.Torrents)
 
 	// Handle text commands
 	switch {
@@ -120,5 +125,9 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 	case searchRe.MatchString(msgTxt):
 		cmd.ShowMetaMovieList(update.Message, cmdData, searchRe, false)
+
+		// Torrent client managment
+	case torrentsRe.MatchString(msgTxt):
+		cmd.ShowTorrentList(update.Message)
 	}
 }

@@ -17,6 +17,7 @@ type Params struct {
 	Commands struct {
 		Download string `json:"download"`
 		Search   string `json:"search"`
+		Torrents string `json:"torrents"`
 	} `json:"commands"`
 	Presets     []string `json:"presets"`
 	VideoFilter struct {
