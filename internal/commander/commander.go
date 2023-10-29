@@ -64,28 +64,18 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 		switch cmdData.Command {
 		case "mm_down":
-			log.Println("Download callback!")
-			if cmdData.Key == "" {
-				log.Println("No kpid!")
-				return
-			}
-			cmd.DownloadByLinkOrId(update.CallbackQuery.Message, cmdData, true)
+			cmd.DownloadBest(update.CallbackQuery.Message, cmdData)
 
 		case "mm_tor":
 			log.Println("Torrent callback!")
-			if cmdData.Key == "" {
-				log.Fatal("No kpid!")
-				return
-			}
-			cmd.SearchByLinkOrId(update.CallbackQuery.Message, cmdData, true)
+			cmd.ShowMovieList(update.CallbackQuery.Message, cmdData)
 
 		case "m_sh":
 			log.Println("Movie show callback!")
-			if cmdData.Key == "" {
-				log.Println("No cache id!")
-				return
-			}
 			cmd.ShowMovie(update.CallbackQuery.Message, cmdData)
+
+		case "dl_f", "dl_s", "dl_t", "dl_w":
+			cmd.DownloadMovie(update.CallbackQuery.Message, cmdData)
 
 		default:
 			log.Println("Unknown callback:", cmdData.Command)
@@ -103,7 +93,7 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 		cmd.Start(update.Message)
 	}
 
-	msgTxt := strings.ToLower(strings.Trim(update.Message.Text, " /"))
+	msgTxt := strings.ToLower(update.Message.Text)
 	cmdData := CommandData{Key: msgTxt}
 	downloadRe := regexp.MustCompile(params.Get().Commands.Download)
 	searchRe := regexp.MustCompile(params.Get().Commands.Search)
@@ -111,15 +101,15 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	// Handle text commands
 	switch {
 	case strings.Contains(msgTxt, "kinopoisk.ru/film"):
-		cmd.DownloadByLinkOrId(update.Message, cmdData, false)
+		cmd.DownloadBest(update.Message, cmdData)
 
 	case strings.Contains(msgTxt, "kinopoisk.ru/series"):
-		cmd.SearchByLinkOrId(update.Message, cmdData, false)
+		cmd.ShowMovieList(update.Message, cmdData)
 
 	case downloadRe.MatchString(msgTxt):
-		cmd.SearchOrDownloadByTitle(update.Message, cmdData, downloadRe, true)
+		cmd.ShowMetaMovieList(update.Message, cmdData, downloadRe, true)
 
 	case searchRe.MatchString(msgTxt):
-		cmd.SearchOrDownloadByTitle(update.Message, cmdData, searchRe, false)
+		cmd.ShowMetaMovieList(update.Message, cmdData, searchRe, false)
 	}
 }

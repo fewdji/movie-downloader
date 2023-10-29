@@ -47,11 +47,11 @@ func (q *Qbittorrent) GetTorrents() error {
 	return nil
 }
 
-func (q *Qbittorrent) Download(movie *torrent.Movie) error {
+func (q *Qbittorrent) Download(movie *torrent.Movie, category string) error {
 	err := q.client.DownloadLink(
 		movie.File,
-		"Фильмы",
-		movie.Meta.NameRu,
+		category,
+		fmt.Sprintf("%s (%d)", movie.Meta.NameRu, movie.Meta.Year),
 		true,
 		false,
 		"",

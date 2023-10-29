@@ -2,6 +2,7 @@ package helper
 
 import (
 	"hash/fnv"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -28,4 +29,9 @@ func Hash(s string) string {
 	h := fnv.New32a()
 	h.Write([]byte(s))
 	return strconv.Itoa(int(h.Sum32()))
+}
+
+func GetDigitsFromStr(str string) string {
+	re := regexp.MustCompile("[0-9]+")
+	return re.FindAllString(str, -1)[0]
 }

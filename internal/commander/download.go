@@ -14,13 +14,8 @@ import (
 	"time"
 )
 
-func (cmd *Commander) DownloadByLinkOrId(inputMessage *tgbotapi.Message, cmdData CommandData, isId bool) {
-	if !isId {
-		msgTxt := strings.ToLower(strings.Trim(inputMessage.Text, " /"))
-		cmdData.Key = msgTxt[strings.LastIndex(msgTxt, "/")+1:]
-	}
-
-	movieId, err := strconv.Atoi(cmdData.Key)
+func (cmd *Commander) DownloadBest(inputMessage *tgbotapi.Message, cmdData CommandData) {
+	movieId, err := strconv.Atoi(helper.GetDigitsFromStr(cmdData.Key))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,9 +41,7 @@ func (cmd *Commander) DownloadByLinkOrId(inputMessage *tgbotapi.Message, cmdData
 		return
 	}
 
-	// TODO: realise downloading torrents
-
-	err = cmd.client.Download(best)
+	err = cmd.client.Download(best, "Фильмы")
 
 	if err != nil {
 		// TODO: msg about error
@@ -60,7 +53,53 @@ func (cmd *Commander) DownloadByLinkOrId(inputMessage *tgbotapi.Message, cmdData
 	cmd.bot.Send(rep)
 }
 
-func (cmd *Commander) SearchOrDownloadByTitle(inputMessage *tgbotapi.Message, cmdData CommandData, searchRe *regexp.Regexp, isDownload bool) {
+func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData CommandData) {
+	mov := torrent.Movie{}
+
+	err := cmd.cache.Get(cmd.ctx, cmdData.Key).Scan(&mov)
+	if err != nil {
+		log.Println("DownloadTorrent: metaMovie not found!")
+		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, "Bad cache!")
+		rep.ReplyToMessageID = inputMessage.MessageID
+		cmd.bot.Send(rep)
+		return
+	}
+
+	var category string
+
+	switch cmdData.Command {
+	case "dl_f":
+		category = "Фильмы"
+	case "dl_s", "dl_w":
+		category = "Сериалы"
+	case "dl_t":
+		category = "Телешоу"
+	default:
+		log.Println("Unknown category!")
+		return
+	}
+
+	err = cmd.client.Download(&mov, category)
+
+	if err != nil {
+		// TODO: msg about error
+		return
+	}
+
+	repText := fmt.Sprintf("Качаю %s (%.2f Gb) с %s в %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Tracker, category)
+
+	if cmdData.Command == "dl_w" {
+		//TODO: add monitoring
+		repText += "\n\n*Новые серии будут докачиваться по мере обновления торрента*"
+	}
+
+	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
+	rep.ParseMode = "markdown"
+	rep.ReplyToMessageID = inputMessage.MessageID
+	cmd.bot.Send(rep)
+}
+
+func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData CommandData, searchRe *regexp.Regexp, isDownload bool) {
 	title := string(searchRe.ReplaceAll([]byte(cmdData.Key), []byte("")))
 	metaMovies := cmd.meta.FindByTitle(title)
 
@@ -93,15 +132,9 @@ func (cmd *Commander) SearchOrDownloadByTitle(inputMessage *tgbotapi.Message, cm
 	cmd.bot.Send(rep)
 }
 
-func (cmd *Commander) SearchByLinkOrId(inputMessage *tgbotapi.Message, cmdData CommandData, isId bool) {
-	if !isId {
-		msgTxt := strings.ToLower(strings.Trim(inputMessage.Text, " /"))
-		cmdData.Key = msgTxt[strings.LastIndex(cmdData.Key, "/")+1:]
-	}
-	movieId, err := strconv.Atoi(cmdData.Key)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData CommandData) {
+	movieId, err := strconv.Atoi(helper.GetDigitsFromStr(cmdData.Key))
+
 	metaMovie := cmd.meta.GetByKpId(movieId)
 	if metaMovie == nil {
 		log.Println("SearchByLinkOrId: metaMovie not found!")
@@ -165,7 +198,15 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandD
 		log.Fatal("Bad cache!")
 	}
 
-	log.Println(mov)
+	cmdData.MessageId = inputMessage.MessageID
+	cmdData.Key = helper.Hash(mov.Link)
+	cmdData.Command = "dl_f"
+	serializedData, err := json.Marshal(cmdData)
+
+	clbFilm := string(serializedData)
+	clbSeries := strings.Replace(clbFilm, "dl_f", "dl_s", 1)
+	clbShow := strings.Replace(clbFilm, "dl_f", "dl_t", 1)
+	clbWatch := strings.Replace(clbFilm, "dl_f", "dl_w", 1)
 
 	date, _ := time.Parse(time.RFC1123Z, mov.Published)
 	mov.Published = date.Format("02.01.2006 в 15:04")
@@ -179,18 +220,18 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandD
 
 	if mov.Meta.Type == torrent.FILM_TYPE {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("💾 Скачать в фильмы", "tor_df"),
+			tgbotapi.NewInlineKeyboardButtonData("💾 Скачать в фильмы", clbFilm),
 		))
 	} else {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("💾 в сериалы", "tor_ds"),
-			tgbotapi.NewInlineKeyboardButtonData("💾 в телешоу", "tor_dt"),
+			tgbotapi.NewInlineKeyboardButtonData("💾 в сериалы", clbSeries),
+			tgbotapi.NewInlineKeyboardButtonData("💾 в телешоу", clbShow),
 		))
 	}
 
 	if mov.Meta.Type != torrent.FILM_TYPE && mov.Meta.Completed == false {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("💾 в сериалы и отслеживать новые серии", "tor_dw"),
+			tgbotapi.NewInlineKeyboardButtonData("💾 в сериалы и отслеживать новые серии", clbWatch),
 		))
 	}
 
