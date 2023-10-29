@@ -37,12 +37,12 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message) {
 		"error":       "🚫",
 	}
 
-	parsedData := CommandData{MessageId: inputMessage.MessageID}
+	parsedData := CommandData{RootMessageId: inputMessage.MessageID}
 	parsedData.Command = "t_sh"
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 	for _, torrent := range torrents {
-		parsedData.Key = torrent.Hash[0:32]
+		parsedData.Key = torrent.Hash[0:16]
 		serializedData, _ := json.Marshal(parsedData)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s %s [%.1f Gb] - %.1f%%",
 			torrentStates[torrent.State], string([]rune(torrent.Title)[:20]), float64(torrent.Size)/float64(1024*1024*1024), torrent.Progress), string(serializedData))))
@@ -60,6 +60,11 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message) {
 }
 
 func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, cmdData CommandData) {
+
+	if cmdData.Key == "" {
+		log.Println("empty key")
+		return
+	}
 
 	torrent := *cmd.client.Show(cmdData.Key)
 
@@ -88,7 +93,6 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, cmdData Comman
 		"error":       "🚫",
 	}
 
-	cmdData.MessageId = inputMessage.MessageID
 	cmdData.Command = "t_p"
 	serializedData, err := json.Marshal(cmdData)
 

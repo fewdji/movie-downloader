@@ -27,9 +27,11 @@ type Commander struct {
 }
 
 type CommandData struct {
-	MessageId int    `json:"m"`
-	Command   string `json:"c"`
-	Key       string `json:"k"`
+	MetaMessageId  int    `json:"y"`
+	RootMessageId  int    `json:"z"`
+	MovieMessageId int    `json:"x"`
+	Command        string `json:"c"`
+	Key            string `json:"k"`
 }
 
 func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client) *Commander {
@@ -65,6 +67,15 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 		}
 
 		switch cmdData.Command {
+		case "del":
+			log.Println("del callback")
+			cmd.DeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
+
+		case "cancel":
+			log.Println("cancel callback")
+			log.Println("cccc", cmdData.RootMessageId, cmdData.MetaMessageId, cmdData.MovieMessageId)
+			cmd.DeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, cmdData.MovieMessageId, cmdData.MetaMessageId, cmdData.RootMessageId)
+
 		case "mm_down":
 			cmd.DownloadBest(update.CallbackQuery.Message, cmdData)
 

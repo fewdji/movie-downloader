@@ -50,8 +50,23 @@ func (cmd *Commander) DownloadBest(inputMessage *tgbotapi.Message, cmdData Comma
 	}
 
 	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Качаю %s (%.2f Gb) с %s в Фильмы", best.Title, float64(best.Size)/float64(1024*1024*1024), best.Tracker))
+
 	rep.ReplyToMessageID = inputMessage.MessageID
-	cmd.bot.Send(rep)
+
+	// Downloading by link
+	if cmdData.Command != "" {
+		err = cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
+		if err != nil {
+			log.Println("can't delete:", err)
+		}
+		rep.ReplyToMessageID = cmdData.RootMessageId
+	}
+
+	_, err = cmd.bot.Send(rep)
+	if err != nil {
+		log.Println("can't send:", err)
+		return
+	}
 }
 
 func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData CommandData) {
@@ -87,6 +102,7 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 		log.Println("Can't download")
 		return
 	}
+	err = cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID, cmdData.MovieMessageId)
 
 	repText := fmt.Sprintf("Качаю %s (%.2f Gb) с %s в %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Tracker, category)
 
@@ -97,7 +113,7 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 
 	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
 	rep.ParseMode = "markdown"
-	rep.ReplyToMessageID = inputMessage.MessageID
+	rep.ReplyToMessageID = cmdData.RootMessageId
 	cmd.bot.Send(rep)
 }
 
@@ -105,7 +121,8 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 	title := string(searchRe.ReplaceAll([]byte(cmdData.Key), []byte("")))
 	metaMovies := cmd.meta.FindByTitle(title)
 
-	if len(metaMovies) == 0 {
+	found := len(metaMovies)
+	if found == 0 {
 		log.Println("SearchOrDownloadByTitle: metaMovies not found!")
 		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
 		rep.ReplyToMessageID = inputMessage.MessageID
@@ -113,9 +130,12 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 		return
 	}
 
-	parsedData := CommandData{MessageId: inputMessage.MessageID}
+	parsedData := CommandData{
+		RootMessageId: inputMessage.MessageID,
+	}
 
 	var rows [][]tgbotapi.InlineKeyboardButton
+	i := 0
 	for _, mov := range metaMovies {
 		if isDownload && mov.Type == torrent.FILM_TYPE {
 			parsedData.Command = "mm_down"
@@ -125,11 +145,19 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 		parsedData.Key = strconv.Itoa(mov.Id)
 		serializedData, _ := json.Marshal(parsedData)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s (%d)", mov.NameRu, mov.Year), string(serializedData))))
+		i++
+		if i == found || i > 5 {
+			parsedData.Command = "cancel"
+			serializedData, _ := json.Marshal(parsedData)
+			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
+			break
+		}
 	}
+
 	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieSearchTitle)
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	// TODO: delete msg with movie list
+	rep.ReplyToMessageID = parsedData.RootMessageId
 
 	cmd.bot.Send(rep)
 }
@@ -153,13 +181,30 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		log.Println("SearchByLinkOrId: torrents not found!")
 	}
 
-	if found > 100 {
-		res = res[found-100:]
+	if found > 99 {
+		res = res[found-99:]
 	}
 
-	parsedData := CommandData{MessageId: inputMessage.MessageID, Command: "m_sh"}
+	log.Println("msgggggg:::", inputMessage.MessageID, cmdData.RootMessageId, cmdData.Command)
+
+	parsedData := CommandData{}
+	if cmdData.Command != "" {
+		parsedData = CommandData{
+			MetaMessageId: inputMessage.MessageID,
+			RootMessageId: cmdData.RootMessageId,
+			Command:       "m_sh",
+		}
+	} else {
+		parsedData = CommandData{
+			RootMessageId: inputMessage.MessageID,
+			Command:       "m_sh",
+		}
+	}
+
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var cacheKey string
+
+	i := 0
 	for _, mov := range res {
 
 		cacheKey = helper.Hash(mov.Link)
@@ -181,13 +226,31 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 							"AVC ", "", 1),
 						"SDR ", "", 1),
 					string(serializedData))))
+
+		i++
+		if i == found || i > 98 {
+			parsedData.Command = "cancel"
+			serializedData, _ := json.Marshal(parsedData)
+			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
+			break
+		}
+
 	}
 
 	// TODO: check list limits, filter the same, sort by size
 	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, found))
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	cmd.bot.Send(tgbotapi.NewDeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID))
+	rep.ReplyToMessageID = parsedData.RootMessageId
+
+	// Downloading by link
+	if cmdData.Command != "" {
+		err = cmd.DeleteMessage(inputMessage.Chat.ID, parsedData.MetaMessageId)
+		if err != nil {
+			log.Println("can't delete:", err)
+		}
+	}
+
 	_, err = cmd.bot.Send(rep)
 	if err != nil {
 		return
@@ -204,9 +267,9 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandD
 		log.Fatal("Bad cache!")
 	}
 
-	cmdData.MessageId = inputMessage.MessageID
 	cmdData.Key = helper.Hash(mov.Link)
 	cmdData.Command = "dl_f"
+	cmdData.MovieMessageId = inputMessage.MessageID
 	serializedData, err := json.Marshal(cmdData)
 
 	clbFilm := string(serializedData)
@@ -214,9 +277,13 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandD
 	clbShow := strings.Replace(clbFilm, "dl_f", "dl_t", 1)
 	clbWatch := strings.Replace(clbFilm, "dl_f", "dl_w", 1)
 
+	clbCancel := strings.Replace(clbFilm, "dl_f", "cancel", 1)
+	clbDel := strings.Replace(clbFilm, "dl_f", "del", 1)
+
 	date, _ := time.Parse(time.RFC1123Z, mov.Published)
 	mov.Published = date.Format("02.01.2006 в 15:04")
 
+	log.Println(clbCancel)
 	//repText := fmt.Sprintf("*%s*\nРазмер: %.2f Gb\nСиды: %d\nТрекер: [%s](%s) \nДобавлен: %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds, mov.Link, mov.Tracker, mov.Published)
 
 	repText := fmt.Sprintf("*%s*\nРазмер: %.2f Gb\nСиды: %d\nТрекер: <TRACKER>\nДобавлен: %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds, mov.Published)
@@ -241,11 +308,19 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandD
 		))
 	}
 
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Отмена", clbCancel),
+		tgbotapi.NewInlineKeyboardButtonData("Назад", clbDel),
+	))
+
 	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	rep.ParseMode = "markdown"
+
+	//rep.ReplyToMessageID = cmdData.RootMessageId
+
 	_, err = cmd.bot.Send(rep)
 	if err != nil {
-		return
+		log.Println(err)
 	}
 }

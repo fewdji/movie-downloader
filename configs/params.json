@@ -69,7 +69,7 @@
       }
     }
   },
-  "bitrate_goal": 4000,
+  "bitrate_goal": 3000,
   "video_map": {
     "resolution": [
       {"name": "UHD", "masks": ["2160p"]},

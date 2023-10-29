@@ -30,7 +30,7 @@ func (q *Qbittorrent) Show(hash string) *Torrent {
 		return nil
 	}
 	for k, t := range torrents {
-		if t.Hash[0:32] == hash {
+		if t.Hash[0:16] == hash {
 			return &torrents[k]
 		}
 	}
