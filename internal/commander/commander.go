@@ -10,8 +10,10 @@ import (
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
+	"movie-downloader-bot/pkg/helper"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -84,6 +86,13 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	}
 
 	if update.Message == nil {
+		return
+	}
+
+	allowedChats := strings.Split(os.Getenv("TG_BOT_ALLOWED"), ",")
+	chatId := strconv.Itoa(int(update.Message.Chat.ID))
+	if !helper.ContainsAny(chatId, allowedChats) {
+		log.Println("No access for:", chatId)
 		return
 	}
 
