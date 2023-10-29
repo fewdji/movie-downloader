@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/redis/go-redis/v9"
 	"log"
@@ -21,6 +22,12 @@ type Commander struct {
 	cache   *redis.Client
 	client  client.Client
 	ctx     context.Context
+}
+
+type CommandData struct {
+	MessageId int    `json:"m"`
+	Command   string `json:"c"`
+	Key       string `json:"k"`
 }
 
 func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client) *Commander {
@@ -48,38 +55,40 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	// Handle callbacks
 	if update.CallbackQuery != nil {
 
-		clbk := strings.Split(update.CallbackQuery.Data, "|")
-		cmdName := clbk[0]
+		cmdData := CommandData{}
+		err := json.Unmarshal([]byte(update.CallbackQuery.Data), &cmdData)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
-		println(cmdName)
-
-		switch cmdName {
-		case "metamovie_download":
+		switch cmdData.Command {
+		case "mm_down":
 			log.Println("Download callback!")
-			if len(clbk) != 2 {
+			if cmdData.Key == "" {
 				log.Println("No kpid!")
 				return
 			}
-			cmd.DownloadByLinkOrId(update.CallbackQuery.Message, clbk[1], true)
+			cmd.DownloadByLinkOrId(update.CallbackQuery.Message, cmdData, true)
 
-		case "metamovie_torrents":
+		case "mm_tor":
 			log.Println("Torrent callback!")
-			if len(clbk) != 2 {
+			if cmdData.Key == "" {
 				log.Fatal("No kpid!")
 				return
 			}
-			cmd.SearchByLinkOrId(update.CallbackQuery.Message, clbk[1], true)
+			cmd.SearchByLinkOrId(update.CallbackQuery.Message, cmdData, true)
 
-		case "movie_show":
+		case "m_sh":
 			log.Println("Movie show callback!")
-			if len(clbk) != 2 {
+			if cmdData.Key == "" {
 				log.Println("No cache id!")
 				return
 			}
-			cmd.ShowMovie(update.CallbackQuery.Message, clbk[1])
+			cmd.ShowMovie(update.CallbackQuery.Message, cmdData)
 
 		default:
-			log.Println("Unknown callback!")
+			log.Println("Unknown callback:", cmdData.Command)
 		}
 		return
 	}
@@ -95,21 +104,22 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 	}
 
 	msgTxt := strings.ToLower(strings.Trim(update.Message.Text, " /"))
+	cmdData := CommandData{Key: msgTxt}
 	downloadRe := regexp.MustCompile(params.Get().Commands.Download)
 	searchRe := regexp.MustCompile(params.Get().Commands.Search)
 
 	// Handle text commands
 	switch {
 	case strings.Contains(msgTxt, "kinopoisk.ru/film"):
-		cmd.DownloadByLinkOrId(update.Message, msgTxt, false)
+		cmd.DownloadByLinkOrId(update.Message, cmdData, false)
 
 	case strings.Contains(msgTxt, "kinopoisk.ru/series"):
-		cmd.SearchByLinkOrId(update.Message, msgTxt, false)
+		cmd.SearchByLinkOrId(update.Message, cmdData, false)
 
 	case downloadRe.MatchString(msgTxt):
-		cmd.SearchOrDownloadByTitle(update.Message, msgTxt, downloadRe, true)
+		cmd.SearchOrDownloadByTitle(update.Message, cmdData, downloadRe, true)
 
 	case searchRe.MatchString(msgTxt):
-		cmd.SearchOrDownloadByTitle(update.Message, msgTxt, searchRe, false)
+		cmd.SearchOrDownloadByTitle(update.Message, cmdData, searchRe, false)
 	}
 }
