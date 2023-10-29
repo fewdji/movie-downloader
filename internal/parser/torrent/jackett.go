@@ -53,7 +53,7 @@ func NewJackettParser() *JackettParser {
 	}
 }
 
-func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
+func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 	var searchResult JackettSearchResult
 
 	var trackers []string
@@ -75,6 +75,7 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 			respF, err := prs.makeRequest(searchF, tracker)
 			if err != nil {
 				log.Println("Timeout:", err)
+				wg.Done()
 				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
@@ -91,6 +92,7 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 			respS, err := prs.makeRequest(searchS, tracker)
 			if err != nil {
 				log.Println("Timeout:", err)
+				wg.Done()
 				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
@@ -102,7 +104,27 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 	wg.Wait()
 	log.Println("End process")
 
+	torrentMovies := Movies{}
+
+	unique := map[string]bool{}
 	for _, jackettMovie := range searchResult.JackettMovies {
+		if jackettMovie.Link != "" {
+			unique[jackettMovie.Link] = false
+		}
+	}
+
+	for _, jackettMovie := range searchResult.JackettMovies {
+
+		if jackettMovie.Link == "" {
+			log.Println("Empty link!")
+			continue
+		}
+
+		if unique[jackettMovie.Link] {
+			continue
+		}
+		unique[jackettMovie.Link] = true
+
 		jackettMovie.setSeeds()
 
 		torrentMovie := Movie{
@@ -123,10 +145,10 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) (torrentMovies Movies) {
 
 		torrentMovie.SetVideoProps()
 		torrentMovies = append(torrentMovies, torrentMovie)
-		torrentMovies.BaseFilter()
+
 	}
 
-	return
+	return &torrentMovies
 }
 
 func (prs *JackettParser) makeRequest(query string, tracker string) (result *JackettSearchResult, err error) {
@@ -136,14 +158,18 @@ func (prs *JackettParser) makeRequest(query string, tracker string) (result *Jac
 	}
 	resp, err := client.Get(apiUrl)
 	if err != nil {
-		log.Println(err)
+		log.Println("No resp: ", err)
 		return nil, err
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Bad resp: ", err)
+		return nil, err
+	}
 	searchResults := new(JackettSearchResult)
 	err = xml.Unmarshal(body, &searchResults)
 	if err != nil {
-		log.Println(err)
+		log.Println("Invalid json response", err)
 		return nil, err
 	}
 	return searchResults, nil

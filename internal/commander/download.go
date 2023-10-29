@@ -28,10 +28,11 @@ func (cmd *Commander) DownloadBest(inputMessage *tgbotapi.Message, cmdData Comma
 		return
 	}
 	log.Println("DownloadMovieByLinkOrId: metaMovie found: ", metaMovie.NameRu)
-	res := cmd.torrent.Find(metaMovie)
+	res := *cmd.torrent.Find(metaMovie).BaseFilter()
 
 	if len(res) == 0 {
 		log.Println("DownloadMovieByLinkOrId: torrents not found!")
+		return
 	}
 
 	best := res.GetBest()
@@ -83,6 +84,7 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 
 	if err != nil {
 		// TODO: msg about error
+		log.Println("Can't download")
 		return
 	}
 
@@ -144,10 +146,15 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		return
 	}
 	log.Println("SearchByLinkOrId: metaMovie found: ", metaMovie.NameRu)
-	res := cmd.torrent.Find(metaMovie)
+	res := *cmd.torrent.Find(metaMovie).BaseFilter().SortBySizeAsc()
 
-	if len(res) == 0 {
+	found := len(res)
+	if found == 0 {
 		log.Println("SearchByLinkOrId: torrents not found!")
+	}
+
+	if found > 100 {
+		res = res[found-100:]
 	}
 
 	parsedData := CommandData{MessageId: inputMessage.MessageID, Command: "m_sh"}
@@ -163,7 +170,6 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 		parsedData.Key = cacheKey
 		serializedData, _ := json.Marshal(parsedData)
-		log.Println(string(serializedData))
 
 		//TODO: Add episode and season info
 		rows = append(rows,
@@ -178,7 +184,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 	}
 
 	// TODO: check list limits, filter the same, sort by size
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, len(res)))
+	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, found))
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
 	cmd.bot.Send(tgbotapi.NewDeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID))

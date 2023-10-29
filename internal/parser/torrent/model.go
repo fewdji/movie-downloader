@@ -13,7 +13,7 @@ const (
 )
 
 type Parser interface {
-	Find(meta *meta.Movie) Movies
+	Find(meta *meta.Movie) *Movies
 }
 
 type Movies []Movie

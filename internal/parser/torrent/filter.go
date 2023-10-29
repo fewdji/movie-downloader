@@ -5,6 +5,7 @@ import (
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/pkg/helper"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -191,6 +192,13 @@ func (movs *Movies) NoSeries() *Movies {
 
 func (movs *Movies) NoDisks() *Movies {
 	return movs.remover(params.Get().VideoFilter.Exclude.Disks)
+}
+
+func (movs *Movies) SortBySizeAsc() *Movies {
+	sort.Slice(*movs, func(i, j int) bool {
+		return (*movs)[i].Size < (*movs)[j].Size
+	})
+	return movs
 }
 
 func (movs *Movies) remover(exclude []string) *Movies {
