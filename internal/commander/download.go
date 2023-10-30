@@ -155,6 +155,7 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 
 	cmdData = CommandData{
 		RootMessageId: inputMessage.MessageID,
+		Offset:        0,
 	}
 
 	limit := 6
@@ -164,7 +165,7 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 		if isDownload && mov.Type == torrent.FILM_TYPE {
 			cmdData.Command = "mm_down"
 		} else {
-			cmdData.Command = "mm_tor"
+			cmdData.Command = "l"
 		}
 		cmdData.Key = strconv.Itoa(mov.Id)
 		serializedData, _ := json.Marshal(cmdData)
@@ -192,7 +193,7 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData CommandData) {
 	parsedData := CommandData{
 		RootMessageId: inputMessage.MessageID,
-		Command:       "m_sh",
+		Command:       "s",
 	}
 	if cmdData.Command != "" {
 		parsedData.RootMessageId = cmdData.RootMessageId
@@ -219,9 +220,9 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		return
 	}
 	log.Println("ShowMovieList: metaMovie found: ", metaMovie.NameRu)
-	res := *cmd.torrent.Find(metaMovie).BaseFilter().SortBySizeAsc()
+	movs := *cmd.torrent.Find(metaMovie).BaseFilter().SortBySizeAsc()
 
-	found := len(res)
+	found := len(movs)
 	if found == 0 {
 		log.Println("ShowMovieList: movies not found!")
 		delMetaMsg()
@@ -229,19 +230,13 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		return
 	}
 
-	limit := 70
-	if found > limit {
-		res = res[found-limit:]
-	}
-
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var cacheKey string
+	limit := 25
 
-	i := 0
-	for _, mov := range res {
-
-		cacheKey = helper.Hash(mov.Link)
-		err = cmd.cache.SetEx(cmd.ctx, cacheKey, mov, time.Hour).Err()
+	for i := cmdData.Offset; i < found && i < cmdData.Offset+limit; i++ {
+		cacheKey = helper.Hash(movs[i].Link)
+		err = cmd.cache.SetEx(cmd.ctx, cacheKey, movs[i], time.Hour).Err()
 		if err != nil {
 			log.Println("ShowMovieList: cache error:", err)
 			delMetaMsg()
@@ -254,8 +249,8 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 		season := " "
 
-		if mov.SeasonInfo != "" {
-			season += "{S" + mov.SeasonInfo + "} "
+		if movs[i].SeasonInfo != "" {
+			season += "{S" + movs[i].SeasonInfo + "} "
 		}
 
 		rows = append(rows,
@@ -264,20 +259,35 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 					strings.Replace(
 						strings.Replace(
 							fmt.Sprintf("%s %s%s%s %s [%.1fG] (%d)",
-								mov.Quality, mov.Resolution, season, mov.Container, mov.DynamicRange, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds),
+								movs[i].Quality, movs[i].Resolution, season, movs[i].Container, movs[i].DynamicRange, float64(movs[i].Size)/float64(1024*1024*1024), movs[i].Seeds),
 							"AVC ", "", 1),
 						"SDR ", "", 1),
 					string(serializedData))))
+	}
 
-		i++
-		if i == found || i > limit-2 {
-			parsedData.Command = "cancel"
-			serializedData, _ = json.Marshal(parsedData)
-			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
-			break
+	if found > limit {
+		parsedData.Command = "l"
+		parsedData.Key = cmdData.Key
+
+		var btns []tgbotapi.InlineKeyboardButton
+
+		if cmdData.Offset >= limit {
+			parsedData.Offset = cmdData.Offset - limit
+			serializedData, _ := json.Marshal(parsedData)
+			btns = append(btns, tgbotapi.NewInlineKeyboardButtonData("<<", string(serializedData)))
 		}
 
+		if found-cmdData.Offset-limit > 0 {
+			parsedData.Offset = cmdData.Offset + limit
+			serializedData, _ := json.Marshal(parsedData)
+			btns = append(btns, tgbotapi.NewInlineKeyboardButtonData(">>", string(serializedData)))
+		}
+		rows = append(rows, btns)
 	}
+
+	parsedData.Command = "cancel"
+	serializedData, _ := json.Marshal(parsedData)
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
 
 	delMetaMsg()
 

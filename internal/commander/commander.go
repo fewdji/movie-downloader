@@ -32,6 +32,7 @@ type CommandData struct {
 	MovieMessageId int    `json:"x"`
 	Command        string `json:"c"`
 	Key            string `json:"k"`
+	Offset         int    `json:"o"`
 }
 
 func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client) *Commander {
@@ -79,11 +80,11 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 		case "mm_down":
 			cmd.DownloadBest(update.CallbackQuery.Message, cmdData)
 
-		case "mm_tor":
+		case "l":
 			log.Println("Torrent callback!")
 			cmd.ShowMovieList(update.CallbackQuery.Message, cmdData)
 
-		case "m_sh":
+		case "s":
 			log.Println("Movie show callback!")
 			cmd.ShowMovie(update.CallbackQuery.Message, update.CallbackQuery.ID, cmdData)
 

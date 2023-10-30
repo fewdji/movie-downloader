@@ -28,7 +28,8 @@ func ContainsAll(s string, contains []string) bool {
 func Hash(s string) string {
 	h := fnv.New32a()
 	h.Write([]byte(s))
-	return strconv.Itoa(int(h.Sum32()))
+	res := int(h.Sum32())
+	return strconv.Itoa(res)
 }
 
 func GetDigitsFromStr(str string) string {
