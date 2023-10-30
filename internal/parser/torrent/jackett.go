@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"movie-downloader-bot/internal/parser/meta"
+	"movie-downloader-bot/pkg/helper"
 	"net/http"
 	"net/url"
 	"os"
@@ -107,23 +108,22 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 	torrentMovies := Movies{}
 
 	unique := map[string]bool{}
+	var uniqueKey string
+
 	for _, jackettMovie := range searchResult.JackettMovies {
-		if jackettMovie.Link != "" {
-			unique[jackettMovie.Link] = false
+		uniqueKey = helper.GetDigitsFromStr(jackettMovie.Link)
+		if uniqueKey != "" {
+			unique[uniqueKey] = false
 		}
 	}
 
 	for _, jackettMovie := range searchResult.JackettMovies {
 
-		if jackettMovie.Link == "" {
-			log.Println("Empty link!")
+		uniqueKey = helper.GetDigitsFromStr(jackettMovie.Link)
+		if uniqueKey == "" || unique[uniqueKey] {
 			continue
 		}
-
-		if unique[jackettMovie.Link] {
-			continue
-		}
-		unique[jackettMovie.Link] = true
+		unique[uniqueKey] = true
 
 		jackettMovie.setSeeds()
 

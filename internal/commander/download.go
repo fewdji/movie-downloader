@@ -185,8 +185,6 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		res = res[found-99:]
 	}
 
-	log.Println("msgggggg:::", inputMessage.MessageID, cmdData.RootMessageId, cmdData.Command)
-
 	parsedData := CommandData{}
 	if cmdData.Command != "" {
 		parsedData = CommandData{

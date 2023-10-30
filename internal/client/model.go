@@ -6,6 +6,9 @@ type Client interface {
 	Download(movie *torrent.Movie, category string) error
 	List() *Torrents
 	Show(hash string) *Torrent
+	Pause(hash string) bool
+	Resume(hash string) bool
+	Delete(hash string, deleteFiles bool) bool
 }
 
 type Torrent struct {

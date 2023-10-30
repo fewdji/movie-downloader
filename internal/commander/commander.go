@@ -90,7 +90,10 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 		case "dl_f", "dl_s", "dl_t", "dl_w":
 			cmd.DownloadMovie(update.CallbackQuery.Message, cmdData)
 
-		case "t_sh":
+		case "t_l":
+			cmd.ShowTorrentList(update.CallbackQuery.Message, cmdData)
+
+		case "t_sh", "t_c", "t_p", "t_r", "t_rf":
 			cmd.ShowTorrent(update.CallbackQuery.Message, cmdData)
 
 		default:
@@ -139,6 +142,6 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 		// Torrent client managment
 	case torrentsRe.MatchString(msgTxt):
-		cmd.ShowTorrentList(update.Message)
+		cmd.ShowTorrentList(update.Message, cmdData)
 	}
 }

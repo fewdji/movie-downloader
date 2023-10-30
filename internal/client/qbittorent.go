@@ -30,11 +30,50 @@ func (q *Qbittorrent) Show(hash string) *Torrent {
 		return nil
 	}
 	for k, t := range torrents {
-		if t.Hash[0:16] == hash {
+		if t.Hash[0:8] == hash {
 			return &torrents[k]
 		}
 	}
 	return nil
+}
+
+func (q *Qbittorrent) Pause(hash string) bool {
+	t := q.Show(hash)
+	if t == nil {
+		log.Println("Bad torrent hash!")
+		return false
+	}
+	_, err := q.client.PauseOne(t.Hash)
+	if err != nil {
+		log.Println(err)
+	}
+	return true
+}
+
+func (q *Qbittorrent) Resume(hash string) bool {
+	t := q.Show(hash)
+	if t == nil {
+		log.Println("Bad torrent hash!")
+		return false
+	}
+	_, err := q.client.ResumeOne(t.Hash)
+	if err != nil {
+		log.Println(err)
+	}
+	return true
+}
+
+func (q *Qbittorrent) Delete(hash string, deleteFiles bool) bool {
+	t := q.Show(hash)
+	if t == nil {
+		log.Println("Bad torrent hash!")
+		return false
+	}
+	_, err := q.client.DeleteOne(t.Hash, deleteFiles)
+	if err != nil {
+		log.Println(err)
+	}
+	return true
 }
 
 func (q *Qbittorrent) List() *Torrents {
@@ -57,12 +96,17 @@ func (q *Qbittorrent) List() *Torrents {
 					eta = 0
 				}
 
+				progress := float64(0)
+				if t.Size != 0 {
+					progress = float64(t.Downloaded*100) / float64(t.Size)
+				}
+
 				tor := Torrent{
 					Title:    t.Name,
 					Hash:     t.Hash,
 					State:    t.State,
 					Speed:    int(t.Dlspeed),
-					Progress: float64(t.Downloaded*100) / float64(t.Size),
+					Progress: progress,
 					Category: t.Category,
 					Size:     int(t.Size),
 					Seeds:    int(t.NumSeeds),
@@ -71,13 +115,6 @@ func (q *Qbittorrent) List() *Torrents {
 
 				newTorrents = append(newTorrents, tor)
 
-				//log.Println(t.Name, t.Hash, t.State)
-
-				//err := qb.PauseOne(t.Hash)
-				//_, err := q.client.ResumeOne(t.Hash)
-				//if err != nil {
-				//	log.Println(err)
-				//}
 			}
 			return &newTorrents
 		} else {
