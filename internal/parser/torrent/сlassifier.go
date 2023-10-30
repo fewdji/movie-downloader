@@ -2,6 +2,7 @@ package torrent
 
 import (
 	params "movie-downloader-bot/internal/config"
+	"regexp"
 	"strings"
 )
 
@@ -11,6 +12,7 @@ func (mov *Movie) SetVideoProps() {
 	mov.SetContainer()
 	mov.SetBitrate()
 	mov.SetQuality()
+	mov.SetSeasonInfo()
 }
 
 func (mov *Movie) SetResolution() bool {
@@ -127,6 +129,30 @@ func (mov *Movie) SetBitrate() bool {
 		}
 
 		return true
+	}
+	return false
+}
+
+func (mov *Movie) SetSeasonInfo() bool {
+	if mov.Meta.Type != FILM_TYPE {
+
+		seasonReg := regexp.MustCompile(`(([\[({] )?((?i)[SE][0-9]{1,2}([)\]}])?)(?i)[-X\]EХЕ](?i)[S]?([0-9]{0,2}))|([0-9- ]{0,3}(?i)Сезон[ы: ]{1,3}[0-9-]+)`)
+		numReg := regexp.MustCompile(`[0-9-]+`)
+
+		seasons := seasonReg.Find([]byte(mov.Title))
+
+		sNum := numReg.FindString(string(seasons))
+
+		if len(sNum) > 1 && sNum[0:1] == "0" {
+			sNum = sNum[1:len(sNum)]
+		}
+		sNum = strings.Replace(sNum, "-0", "-", 1)
+
+		if len(sNum) < 8 {
+			mov.SeasonInfo = sNum
+			return true
+		}
+
 	}
 	return false
 }

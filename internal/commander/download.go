@@ -229,7 +229,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		return
 	}
 
-	limit := 80
+	limit := 70
 	if found > limit {
 		res = res[found-limit:]
 	}
@@ -252,14 +252,19 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		parsedData.Key = cacheKey
 		serializedData, _ := json.Marshal(parsedData)
 
-		//TODO: Add episode and season info
+		season := " "
+
+		if mov.SeasonInfo != "" {
+			season += "{S" + mov.SeasonInfo + "} "
+		}
+
 		rows = append(rows,
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(
 					strings.Replace(
 						strings.Replace(
-							fmt.Sprintf("%s %s %s %s [%.1fG] (%d)",
-								mov.Quality, mov.Resolution, mov.Container, mov.DynamicRange, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds),
+							fmt.Sprintf("%s %s%s%s %s [%.1fG] (%d)",
+								mov.Quality, mov.Resolution, season, mov.Container, mov.DynamicRange, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds),
 							"AVC ", "", 1),
 						"SDR ", "", 1),
 					string(serializedData))))

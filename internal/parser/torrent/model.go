@@ -33,6 +33,7 @@ type Movie struct {
 	Bitrate      int        `json:"bitrate"`
 	File         string     `json:"file"`
 	Preset       string     `json:"preset"`
+	SeasonInfo   string     `json:"season_info"`
 }
 
 func (movie Movie) MarshalBinary() ([]byte, error) {
