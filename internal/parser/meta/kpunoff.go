@@ -54,7 +54,7 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 	}
 
 	for _, kpMovie := range kpSearchResult.Movies {
-		if kpMovie.NameRu == "" {
+		if kpMovie.NameRu == "" || kpMovie.Year == "null" {
 			continue
 		}
 

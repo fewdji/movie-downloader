@@ -6,7 +6,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"strings"
-	"time"
 )
 
 func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData CommandData) {
@@ -41,7 +40,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(cancel)),
 		tgbotapi.NewInlineKeyboardButtonData("Обновить", refresh)))
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, "Список торрентов")
+	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Активные торренты (%d):", len(torrents)))
 	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
 	err := cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
@@ -56,7 +55,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 	}
 }
 
-func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, cmdData CommandData) {
+func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId string, cmdData CommandData) {
 
 	if cmdData.Key == "" {
 		log.Println("empty key")
@@ -65,12 +64,16 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, cmdData Comman
 	switch cmdData.Command {
 	case "t_p":
 		cmd.client.Pause(cmdData.Key)
-		time.Sleep(time.Millisecond * 600)
+		ans := tgbotapi.NewCallback(callbackId, "Торрент остановлен!")
+		cmd.bot.Send(ans)
 	case "t_c":
 		cmd.client.Resume(cmdData.Key)
-		time.Sleep(time.Millisecond * 600)
+		ans := tgbotapi.NewCallback(callbackId, "Торрент запущен!")
+		cmd.bot.Send(ans)
 	case "t_r", "t_rf":
 		cmd.client.Delete(cmdData.Key, cmdData.Command == "t_rf")
+		ans := tgbotapi.NewCallback(callbackId, "Торрент удален!")
+		cmd.bot.Send(ans)
 		err := cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
 		if err != nil {
 			log.Println("can't delete:", err)
@@ -92,7 +95,6 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, cmdData Comman
 	}
 
 	cmdData.Command = "placeholder"
-	cmdData.MetaMessageId = inputMessage.MessageID
 	serializedData, err := json.Marshal(cmdData)
 
 	clb := string(serializedData)

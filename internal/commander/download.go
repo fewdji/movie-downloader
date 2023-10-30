@@ -15,69 +15,91 @@ import (
 )
 
 func (cmd *Commander) DownloadBest(inputMessage *tgbotapi.Message, cmdData CommandData) {
+
+	replyToMessageID := inputMessage.MessageID
+	// Downloading after metaMovie callback
+	if cmdData.Command != "" {
+		replyToMessageID = cmdData.RootMessageId
+	}
+
+	delLastMsgIfClbk := func() {
+		if cmdData.Command != "" {
+			cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
+		}
+	}
+
+	sendErrorMsg := func(msgTxt string) {
+		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
+		errMsg.ReplyToMessageID = replyToMessageID
+		cmd.bot.Send(errMsg)
+	}
+
 	movieId, err := strconv.Atoi(helper.GetDigitsFromStr(cmdData.Key))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 	metaMovie := cmd.meta.GetByKpId(movieId)
 	if metaMovie == nil {
-		log.Println("DownloadMovieByLinkOrId: metaMovie not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
-		rep.ReplyToMessageID = inputMessage.MessageID
-		cmd.bot.Send(rep)
+		log.Println("DownloadBest: metaMovie not found")
+		delLastMsgIfClbk()
+		sendErrorMsg(params.Get().StaticText.MetaMovieNotFound)
 		return
 	}
-	log.Println("DownloadMovieByLinkOrId: metaMovie found: ", metaMovie.NameRu)
+
 	res := *cmd.torrent.Find(metaMovie).BaseFilter()
 
 	if len(res) == 0 {
-		log.Println("DownloadMovieByLinkOrId: torrents not found!")
+		log.Println("DownloadBest: torrents not found")
+		delLastMsgIfClbk()
+		sendErrorMsg("Фильм не найден на трекерах!")
 		return
 	}
 
-	best := res.GetBest()
+	mov := res.GetBest()
 
-	if best == nil {
-		log.Println("DownloadMovieByLinkOrId: torrents with this params not found!")
+	if mov == nil {
+		log.Println("DownloadBest: torrents with this params not found")
+		delLastMsgIfClbk()
+		cmd.ShowMovieList(inputMessage, cmdData)
 		return
 	}
 
-	err = cmd.client.Download(best, "Фильмы")
+	err = cmd.client.Download(mov, "Фильмы")
 
 	if err != nil {
-		// TODO: msg about error
+		log.Println("DownloadBest: download client error:", err)
+		delLastMsgIfClbk()
+		sendErrorMsg("Ошибка торрент-клиента, не удалось загрузить!")
 		return
 	}
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Качаю %s (%.2f Gb) с %s в Фильмы", best.Title, float64(best.Size)/float64(1024*1024*1024), best.Tracker))
-
-	rep.ReplyToMessageID = inputMessage.MessageID
-
-	// Downloading by link
-	if cmdData.Command != "" {
-		err = cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
-		if err != nil {
-			log.Println("can't delete:", err)
-		}
-		rep.ReplyToMessageID = cmdData.RootMessageId
-	}
-
-	_, err = cmd.bot.Send(rep)
+	delLastMsgIfClbk()
+	err = cmd.downloadMessage(mov, inputMessage.Chat.ID, "Фильмы", replyToMessageID)
 	if err != nil {
-		log.Println("can't send:", err)
-		return
+		log.Println("DownloadBest: send error", err)
+		sendErrorMsg("Не удалось отправить сообщение о начале загрузки!")
 	}
 }
 
 func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData CommandData) {
+	deleteMsgs := func() {
+		cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID, cmdData.MovieMessageId)
+	}
+
+	sendErrorMsg := func(msgTxt string) {
+		deleteMsgs()
+		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
+		errMsg.ReplyToMessageID = cmdData.RootMessageId
+		cmd.bot.Send(errMsg)
+	}
+
 	mov := torrent.Movie{}
 
 	err := cmd.cache.Get(cmd.ctx, cmdData.Key).Scan(&mov)
 	if err != nil {
-		log.Println("DownloadTorrent: metaMovie not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, "Bad cache!")
-		rep.ReplyToMessageID = inputMessage.MessageID
-		cmd.bot.Send(rep)
+		log.Println("DownloadMovie: bad cache, metaMovie not found", err)
+		sendErrorMsg("Ошибка кэша, не удалось идентифицировать фильм!")
 		return
 	}
 
@@ -86,10 +108,12 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 	switch cmdData.Command {
 	case "dl_f":
 		category = "Фильмы"
-	case "dl_s", "dl_w":
+	case "dl_s":
 		category = "Сериалы"
 	case "dl_t":
 		category = "Телешоу"
+	case "dl_w":
+		category = "watch"
 	default:
 		log.Println("Unknown category!")
 		return
@@ -98,105 +122,114 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 	err = cmd.client.Download(&mov, category)
 
 	if err != nil {
-		// TODO: msg about error
-		log.Println("Can't download")
-		return
-	}
-	err = cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID, cmdData.MovieMessageId)
-
-	repText := fmt.Sprintf("Качаю %s (%.2f Gb) с %s в %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Tracker, category)
-
-	if cmdData.Command == "dl_w" {
-		//TODO: add monitoring
-		repText += "\n\n*Новые серии будут докачиваться по мере обновления торрента*"
+		log.Println("DownloadMovie: download client error", err)
+		sendErrorMsg("Ошибка торрент-клиента, не удалось загрузить!")
 	}
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
-	rep.ParseMode = "markdown"
-	rep.ReplyToMessageID = cmdData.RootMessageId
-	cmd.bot.Send(rep)
+	deleteMsgs()
+	err = cmd.downloadMessage(&mov, inputMessage.Chat.ID, category, cmdData.RootMessageId)
+	if err != nil {
+		log.Println("DownloadMovie: send error", err)
+		sendErrorMsg("Не удалось отправить сообщение о начале загрузки!")
+	}
 }
 
 func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData CommandData, searchRe *regexp.Regexp, isDownload bool) {
+	sendErrorMsg := func(msgTxt string) {
+		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
+		errMsg.ReplyToMessageID = inputMessage.MessageID
+		cmd.bot.Send(errMsg)
+	}
+
 	title := string(searchRe.ReplaceAll([]byte(cmdData.Key), []byte("")))
 	metaMovies := cmd.meta.FindByTitle(title)
 
 	found := len(metaMovies)
 	if found == 0 {
-		log.Println("SearchOrDownloadByTitle: metaMovies not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
-		rep.ReplyToMessageID = inputMessage.MessageID
-		cmd.bot.Send(rep)
+		log.Println("ShowMetaMovieList: metaMovies not found!")
+		sendErrorMsg(params.Get().StaticText.MetaMovieNotFound)
 		return
 	}
 
-	parsedData := CommandData{
+	cmdData = CommandData{
 		RootMessageId: inputMessage.MessageID,
 	}
 
+	limit := 6
 	var rows [][]tgbotapi.InlineKeyboardButton
 	i := 0
 	for _, mov := range metaMovies {
 		if isDownload && mov.Type == torrent.FILM_TYPE {
-			parsedData.Command = "mm_down"
+			cmdData.Command = "mm_down"
 		} else {
-			parsedData.Command = "mm_tor"
+			cmdData.Command = "mm_tor"
 		}
-		parsedData.Key = strconv.Itoa(mov.Id)
-		serializedData, _ := json.Marshal(parsedData)
+		cmdData.Key = strconv.Itoa(mov.Id)
+		serializedData, _ := json.Marshal(cmdData)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s (%d)", mov.NameRu, mov.Year), string(serializedData))))
 		i++
-		if i == found || i > 5 {
-			parsedData.Command = "cancel"
-			serializedData, _ := json.Marshal(parsedData)
+		if i == found || i > limit-1 {
+			cmdData.Command = "cancel"
+			serializedData, _ = json.Marshal(cmdData)
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
 			break
 		}
 	}
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieSearchTitle)
-	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieSearchTitle)
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ReplyToMessageID = inputMessage.MessageID
 
-	rep.ReplyToMessageID = parsedData.RootMessageId
-
-	cmd.bot.Send(rep)
+	_, err := cmd.bot.Send(msg)
+	if err != nil {
+		log.Println("ShowMetaMovieList: can't send", err)
+		sendErrorMsg("Ошибка, не удалось сформировать список фильмов!")
+	}
 }
 
 func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData CommandData) {
+	parsedData := CommandData{
+		RootMessageId: inputMessage.MessageID,
+		Command:       "m_sh",
+	}
+	if cmdData.Command != "" {
+		parsedData.RootMessageId = cmdData.RootMessageId
+		parsedData.MetaMessageId = inputMessage.MessageID
+	}
+
+	sendErrorMsg := func(msgTxt string) {
+		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
+		errMsg.ReplyToMessageID = inputMessage.MessageID
+		cmd.bot.Send(errMsg)
+	}
+
+	delMetaMsg := func() {
+		cmd.DeleteMessage(inputMessage.Chat.ID, parsedData.MetaMessageId)
+	}
+
 	movieId, err := strconv.Atoi(helper.GetDigitsFromStr(cmdData.Key))
 
 	metaMovie := cmd.meta.GetByKpId(movieId)
 	if metaMovie == nil {
-		log.Println("SearchByLinkOrId: metaMovie not found!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, params.Get().StaticText.MetaMovieNotFound)
-		rep.ReplyToMessageID = inputMessage.MessageID
-		cmd.bot.Send(rep)
+		log.Println("ShowMovieList: metaMovie not found!")
+		delMetaMsg()
+		sendErrorMsg("Ошибка кэша, связанный фильм не найден!")
 		return
 	}
-	log.Println("SearchByLinkOrId: metaMovie found: ", metaMovie.NameRu)
+	log.Println("ShowMovieList: metaMovie found: ", metaMovie.NameRu)
 	res := *cmd.torrent.Find(metaMovie).BaseFilter().SortBySizeAsc()
 
 	found := len(res)
 	if found == 0 {
-		log.Println("SearchByLinkOrId: torrents not found!")
+		log.Println("ShowMovieList: movies not found!")
+		delMetaMsg()
+		sendErrorMsg("Фильм не найден на трекерах!")
+		return
 	}
 
-	if found > 99 {
-		res = res[found-99:]
-	}
-
-	parsedData := CommandData{}
-	if cmdData.Command != "" {
-		parsedData = CommandData{
-			MetaMessageId: inputMessage.MessageID,
-			RootMessageId: cmdData.RootMessageId,
-			Command:       "m_sh",
-		}
-	} else {
-		parsedData = CommandData{
-			RootMessageId: inputMessage.MessageID,
-			Command:       "m_sh",
-		}
+	limit := 80
+	if found > limit {
+		res = res[found-limit:]
 	}
 
 	var rows [][]tgbotapi.InlineKeyboardButton
@@ -206,9 +239,12 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 	for _, mov := range res {
 
 		cacheKey = helper.Hash(mov.Link)
-		err := cmd.cache.SetEx(cmd.ctx, cacheKey, mov, time.Hour).Err()
+		err = cmd.cache.SetEx(cmd.ctx, cacheKey, mov, time.Hour).Err()
 		if err != nil {
-			panic(err)
+			log.Println("ShowMovieList: cache error:", err)
+			delMetaMsg()
+			sendErrorMsg("Ошибка кэша, невозможно сформировать список торрентов!")
+			return
 		}
 
 		parsedData.Key = cacheKey
@@ -220,75 +256,73 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 				tgbotapi.NewInlineKeyboardButtonData(
 					strings.Replace(
 						strings.Replace(
-							fmt.Sprintf("%s %s %s %s [%.1fG] (%d)", mov.Quality, mov.Resolution, mov.Container, mov.DynamicRange, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds),
+							fmt.Sprintf("%s %s %s %s [%.1fG] (%d)",
+								mov.Quality, mov.Resolution, mov.Container, mov.DynamicRange, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds),
 							"AVC ", "", 1),
 						"SDR ", "", 1),
 					string(serializedData))))
 
 		i++
-		if i == found || i > 98 {
+		if i == found || i > limit-2 {
 			parsedData.Command = "cancel"
-			serializedData, _ := json.Marshal(parsedData)
+			serializedData, _ = json.Marshal(parsedData)
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
 			break
 		}
 
 	}
 
-	// TODO: check list limits, filter the same, sort by size
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, found))
-	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	delMetaMsg()
 
-	rep.ReplyToMessageID = parsedData.RootMessageId
+	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, found))
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ReplyToMessageID = parsedData.RootMessageId
 
-	// Downloading by link
-	if cmdData.Command != "" {
-		err = cmd.DeleteMessage(inputMessage.Chat.ID, parsedData.MetaMessageId)
-		if err != nil {
-			log.Println("can't delete:", err)
-		}
-	}
-
-	_, err = cmd.bot.Send(rep)
+	_, err = cmd.bot.Send(msg)
 	if err != nil {
-		return
+		log.Println("ShowMovieList: can't send", err)
+		sendErrorMsg("Ошибка, не удалось сформировать список торрентов!")
 	}
 
 	return
 }
 
-func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandData) {
+func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, callbackId string, cmdData CommandData) {
+	sendErrorMsg := func(msgTxt string) {
+		cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
+		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
+		errMsg.ReplyToMessageID = cmdData.RootMessageId
+		cmd.bot.Send(errMsg)
+	}
+
 	mov := torrent.Movie{}
 
 	err := cmd.cache.Get(cmd.ctx, cmdData.Key).Scan(&mov)
 	if err != nil {
-		log.Fatal("Bad cache!")
+		log.Println("ShowMovie: сache error", err)
+		sendErrorMsg("Ошибка кэша, не удалось распознать фильм!")
+		return
 	}
 
-	cmdData.Key = helper.Hash(mov.Link)
-	cmdData.Command = "dl_f"
+	cmdData.Command = "placeholder"
 	cmdData.MovieMessageId = inputMessage.MessageID
 	serializedData, err := json.Marshal(cmdData)
 
-	clbFilm := string(serializedData)
-	clbSeries := strings.Replace(clbFilm, "dl_f", "dl_s", 1)
-	clbShow := strings.Replace(clbFilm, "dl_f", "dl_t", 1)
-	clbWatch := strings.Replace(clbFilm, "dl_f", "dl_w", 1)
+	clb := string(serializedData)
+	clbFilm := strings.Replace(clb, "placeholder", "dl_s", 1)
+	clbSeries := strings.Replace(clb, "placeholder", "dl_s", 1)
+	clbShow := strings.Replace(clb, "placeholder", "dl_t", 1)
+	clbWatch := strings.Replace(clb, "placeholder", "dl_w", 1)
+	clbCancel := strings.Replace(clb, "placeholder", "cancel", 1)
+	clbDel := strings.Replace(clb, "placeholder", "del", 1)
 
-	clbCancel := strings.Replace(clbFilm, "dl_f", "cancel", 1)
-	clbDel := strings.Replace(clbFilm, "dl_f", "del", 1)
-
-	date, _ := time.Parse(time.RFC1123Z, mov.Published)
-	mov.Published = date.Format("02.01.2006 в 15:04")
-
-	log.Println(clbCancel)
-	//repText := fmt.Sprintf("*%s*\nРазмер: %.2f Gb\nСиды: %d\nТрекер: [%s](%s) \nДобавлен: %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds, mov.Link, mov.Tracker, mov.Published)
+	pubDate, _ := time.Parse(time.RFC1123Z, mov.Published)
+	mov.Published = pubDate.Format("02.01.2006 в 15:04")
 
 	repText := fmt.Sprintf("*%s*\nРазмер: %.2f Gb\nСиды: %d\nТрекер: <TRACKER>\nДобавлен: %s", mov.Title, float64(mov.Size)/float64(1024*1024*1024), mov.Seeds, mov.Published)
 	repText = strings.Replace(repText, "<TRACKER>", fmt.Sprintf("[%s](%s)", mov.Tracker, mov.Link), 1)
 
 	var rows [][]tgbotapi.InlineKeyboardButton
-
 	if mov.Meta.Type == torrent.FILM_TYPE {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("💾 Скачать в фильмы", clbFilm),
@@ -299,26 +333,57 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, cmdData CommandD
 			tgbotapi.NewInlineKeyboardButtonData("💾 в телешоу", clbShow),
 		))
 	}
-
 	if mov.Meta.Type != torrent.FILM_TYPE && mov.Meta.Completed == false {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("💾 в сериалы и отслеживать новые серии", clbWatch),
 		))
 	}
-
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Отмена", clbCancel),
 		tgbotapi.NewInlineKeyboardButtonData("Назад", clbDel),
 	))
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
-	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-	rep.ParseMode = "markdown"
+	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ParseMode = "markdown"
 
-	//rep.ReplyToMessageID = cmdData.RootMessageId
+	ans := tgbotapi.NewCallback(callbackId, "")
+	cmd.bot.Send(ans)
 
-	_, err = cmd.bot.Send(rep)
+	_, err = cmd.bot.Send(msg)
 	if err != nil {
-		log.Println(err)
+		log.Println("ShowMovie: can't send", err)
+		sendErrorMsg("Ошибка, не удалось сформировать фильм!")
 	}
+}
+
+func (cmd *Commander) downloadMessage(mov *torrent.Movie, chatId int64, category string, replyToMessageId int) error {
+	watchTxt := false
+	if category == "watch" {
+		category = "Сериалы"
+		watchTxt = true
+	}
+
+	msgText := fmt.Sprintf("Качаю %s (%.2f Gb) с <TRACKER> в %s",
+		mov.Title, float64(mov.Size)/float64(1024*1024*1024), category)
+
+	msgText = strings.Replace(msgText, "<TRACKER>", fmt.Sprintf("[%s](%s)", mov.Tracker, mov.Link), 1)
+
+	if watchTxt {
+		msgText += "\n\n*Новые серии будут докачиваться по мере обновления торрента*"
+	}
+
+	msg := tgbotapi.NewMessage(chatId, msgText)
+	msg.DisableWebPagePreview = true
+	msg.ParseMode = "markdown"
+
+	if replyToMessageId != 0 {
+		msg.ReplyToMessageID = replyToMessageId
+	}
+
+	_, err := cmd.bot.Send(msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }

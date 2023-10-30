@@ -27,8 +27,8 @@ type Commander struct {
 }
 
 type CommandData struct {
-	MetaMessageId  int    `json:"y"`
 	RootMessageId  int    `json:"z"`
+	MetaMessageId  int    `json:"y"`
 	MovieMessageId int    `json:"x"`
 	Command        string `json:"c"`
 	Key            string `json:"k"`
@@ -73,8 +73,8 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 		case "cancel":
 			log.Println("cancel callback")
-			log.Println("cccc", cmdData.RootMessageId, cmdData.MetaMessageId, cmdData.MovieMessageId)
 			cmd.DeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, cmdData.MovieMessageId, cmdData.MetaMessageId, cmdData.RootMessageId)
+			cmdData = CommandData{}
 
 		case "mm_down":
 			cmd.DownloadBest(update.CallbackQuery.Message, cmdData)
@@ -85,7 +85,7 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 		case "m_sh":
 			log.Println("Movie show callback!")
-			cmd.ShowMovie(update.CallbackQuery.Message, cmdData)
+			cmd.ShowMovie(update.CallbackQuery.Message, update.CallbackQuery.ID, cmdData)
 
 		case "dl_f", "dl_s", "dl_t", "dl_w":
 			cmd.DownloadMovie(update.CallbackQuery.Message, cmdData)
@@ -94,7 +94,7 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 			cmd.ShowTorrentList(update.CallbackQuery.Message, cmdData)
 
 		case "t_sh", "t_c", "t_p", "t_r", "t_rf":
-			cmd.ShowTorrent(update.CallbackQuery.Message, cmdData)
+			cmd.ShowTorrent(update.CallbackQuery.Message, update.CallbackQuery.ID, cmdData)
 
 		default:
 			log.Println("Unknown callback:", cmdData.Command)

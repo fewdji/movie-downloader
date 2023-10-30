@@ -52,7 +52,7 @@ func (movs *Movies) GetBest() *Movie {
 	return &bests[maxSizeKey]
 }
 
-func (movs *Movies) matchTitle() *Movies {
+func (movs *Movies) MatchTitle() *Movies {
 	for i, fl := 0, false; i < len(*movs); i++ {
 		mov := (*movs)[i]
 		nameRu, nameOrig := mov.Meta.NameRu, mov.Meta.NameOriginal
@@ -86,7 +86,7 @@ func (movs *Movies) matchTitle() *Movies {
 }
 
 func (movs *Movies) BaseFilter() *Movies {
-	return movs.matchTitle().
+	return movs.MatchTitle().
 		NoTrailers().
 		NoBadQuality().
 		NoBadFormats().
