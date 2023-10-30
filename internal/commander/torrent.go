@@ -9,88 +9,93 @@ import (
 )
 
 func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData CommandData) {
+	sendErrorMsg := func(msgTxt string) {
+		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
+		errMsg.ReplyToMessageID = inputMessage.MessageID
+		cmd.bot.Send(errMsg)
+	}
 
-	torrents := *cmd.client.List()
+	delMsg := func() {
+		cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
+	}
 
-	log.Println(torrents)
+	torrents := cmd.client.List()
 
-	if len(torrents) == 0 {
-		log.Println("ShowTorrentList: now active torrents!")
-		if cmdData.Command == "" {
-			rep := tgbotapi.NewMessage(inputMessage.Chat.ID, "Нет активных торрентов")
-			rep.ReplyToMessageID = inputMessage.MessageID
-			cmd.bot.Send(rep)
+	if torrents == nil {
+		log.Println("ShowTorrentList: no active torrents!")
+		if cmdData.Command != "" {
+			delMsg()
 		}
+		sendErrorMsg("Нет активных торрентов")
 		return
 	}
 
 	cmdData.Command = "t_sh"
-
 	var rows [][]tgbotapi.InlineKeyboardButton
-	for _, torrent := range torrents {
+	for _, torrent := range *torrents {
 		cmdData.Key = torrent.Hash[0:8]
 		serializedData, _ := json.Marshal(cmdData)
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s %s [%.1f Gb] - %.1f%%",
-			torrentStateIcon(torrent.State), string([]rune(torrent.Title)[:20]), float64(torrent.Size)/float64(1024*1024*1024), torrent.Progress), string(serializedData))))
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(
+			fmt.Sprintf("%s %s [%.1f Gb] - %.1f%%",
+				torrentStateIcon(torrent.State), string([]rune(torrent.Title)[:20]), float64(torrent.Size)/float64(1024*1024*1024), torrent.Progress), string(serializedData))))
 	}
 
 	cmdData.Command = "del"
 	cancel, _ := json.Marshal(cmdData)
 	refresh := strings.Replace(string(cancel), "del", "t_l", 1)
-	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(cancel)),
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Отмена", string(cancel)),
 		tgbotapi.NewInlineKeyboardButtonData("Обновить", refresh)))
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Активные торренты (%d):", len(torrents)))
-	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg := tgbotapi.NewMessage(inputMessage.Chat.ID,
+		fmt.Sprintf("Активные торренты (%d):", len(*torrents)))
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	err := cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
-	if err != nil {
-		log.Println("can't delete:", err)
-	}
+	delMsg()
 
-	_, err = cmd.bot.Send(rep)
+	_, err := cmd.bot.Send(msg)
 	if err != nil {
-		log.Println(err)
-		return
+		log.Println("ShowTorrentList: can't send", err)
+		sendErrorMsg("Ошибка, не удалось сформировать список торрентов!")
 	}
 }
 
 func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId string, cmdData CommandData) {
+	delMsg := func() {
+		cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
+	}
+
+	sendClbk := func(msgTxt string) {
+		ans := tgbotapi.NewCallback(callbackId, msgTxt)
+		cmd.bot.Send(ans)
+	}
 
 	if cmdData.Key == "" {
-		log.Println("empty key")
+		log.Println("ShowTorrent: empty key")
+		sendClbk("Торрент не найден!")
 		return
 	}
+
+	torrent := cmd.client.Show(cmdData.Key)
+
+	if torrent == nil {
+		log.Println("ShowTorrent: not found")
+		sendClbk("Торрент не найден!")
+		return
+	}
+
 	switch cmdData.Command {
 	case "t_p":
 		cmd.client.Pause(cmdData.Key)
-		ans := tgbotapi.NewCallback(callbackId, "Торрент остановлен!")
-		cmd.bot.Send(ans)
+		sendClbk("Торрент остановлен!")
 	case "t_c":
 		cmd.client.Resume(cmdData.Key)
-		ans := tgbotapi.NewCallback(callbackId, "Торрент запущен!")
-		cmd.bot.Send(ans)
+		sendClbk("Торрент запущен!")
 	case "t_r", "t_rf":
 		cmd.client.Delete(cmdData.Key, cmdData.Command == "t_rf")
-		ans := tgbotapi.NewCallback(callbackId, "Торрент удален!")
-		cmd.bot.Send(ans)
-		err := cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
-		if err != nil {
-			log.Println("can't delete:", err)
-		}
+		sendClbk("Торрент удален!")
+		delMsg()
 		cmd.ShowTorrentList(inputMessage, cmdData)
-		return
-	}
-
-	torrent := *cmd.client.Show(cmdData.Key)
-
-	log.Println(torrent)
-
-	if &torrent == nil {
-		log.Println("ShowTorrent: bad has!")
-		rep := tgbotapi.NewMessage(inputMessage.Chat.ID, "Торрент не существует")
-		rep.ReplyToMessageID = inputMessage.MessageID
-		cmd.bot.Send(rep)
 		return
 	}
 
@@ -106,17 +111,14 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	clbBack := strings.Replace(clb, "placeholder", "t_l", 1)
 	clbCancel := strings.Replace(clb, "placeholder", "del", 1)
 
-	log.Println(torrent.Progress)
-
-	repText := fmt.Sprintf("*%s*\nСостояние: %s\nРазмер: %.2f Gb\nЗагружено: %.2f%%\nСиды: %d",
+	msgText := fmt.Sprintf("*%s*\nСостояние: %s\nРазмер: %.2f Gb\nЗагружено: %.2f%%\nСиды: %d",
 		string([]rune(torrent.Title)[:20]), torrentStateIcon(torrent.State), float64(torrent.Size)/float64(1024*1024*1024), torrent.Progress, torrent.Seeds)
 
 	if torrent.Eta != 0 {
-		repText += fmt.Sprintf("\nСкорость: %.2f Mb/сек.\nОсталось: %d мин.", float64(torrent.Speed)/float64(1024*1024), torrent.Eta/60)
+		msgText += fmt.Sprintf("\nСкорость: %.2f Mb/сек.\nОсталось: %d мин.", float64(torrent.Speed)/float64(1024*1024), torrent.Eta/60)
 	}
 
 	var rows [][]tgbotapi.InlineKeyboardButton
-
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", clbCancel),
 		tgbotapi.NewInlineKeyboardButtonData("Назад", clbBack)),
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Удалить торрент", clbDel),
@@ -125,18 +127,16 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 			tgbotapi.NewInlineKeyboardButtonData("Запустить", clbRun)),
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Обновить", clbUpdate)))
 
-	rep := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
-	rep.ParseMode = "markdown"
-	rep.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgText)
+	msg.ParseMode = "markdown"
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	err = cmd.DeleteMessage(inputMessage.Chat.ID, inputMessage.MessageID)
-	if err != nil {
-		log.Println("can't delete:", err)
-	}
+	delMsg()
 
-	_, err = cmd.bot.Send(rep)
+	_, err = cmd.bot.Send(msg)
 	if err != nil {
-		return
+		log.Println("ShowTorrent: can't send", err)
+		sendClbk("Ошибка, не удалось открыть торрент!")
 	}
 }
 

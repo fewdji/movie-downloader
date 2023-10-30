@@ -54,7 +54,7 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 	}
 
 	for _, kpMovie := range kpSearchResult.Movies {
-		if kpMovie.NameRu == "" || kpMovie.Year == "null" {
+		if kpMovie.Year == nil || kpMovie.NameRu == "" {
 			continue
 		}
 
@@ -80,8 +80,14 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
 		log.Fatal(err)
 	}
 
-	if kpMovie.Length == nil || kpMovie.Year == nil || kpMovie.NameRu == "" {
+	if kpMovie.Year == nil || kpMovie.NameRu == "" {
 		return nil
+	}
+
+	movieLength := 0
+	switch v := kpMovie.Length.(type) {
+	case float64:
+		movieLength = int(v)
 	}
 
 	metaMovie = &Movie{
@@ -90,7 +96,7 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
 		NameRu:       kpMovie.NameRu,
 		NameOriginal: kpMovie.NameOriginal,
 		Year:         int(kpMovie.Year.(float64)),
-		Length:       int(kpMovie.Length.(float64)),
+		Length:       movieLength,
 		Completed:    kpMovie.Completed,
 	}
 	return

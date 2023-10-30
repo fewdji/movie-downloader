@@ -24,9 +24,12 @@ func NewQbittorrent() *Qbittorrent {
 }
 
 func (q *Qbittorrent) Show(hash string) *Torrent {
-	torrents := *q.List()
+	res := q.List()
+	if res == nil {
+		return nil
+	}
+	torrents := *res
 	if len(torrents) == 0 {
-		log.Println("No torrents!")
 		return nil
 	}
 	for k, t := range torrents {
@@ -40,7 +43,6 @@ func (q *Qbittorrent) Show(hash string) *Torrent {
 func (q *Qbittorrent) Pause(hash string) bool {
 	t := q.Show(hash)
 	if t == nil {
-		log.Println("Bad torrent hash!")
 		return false
 	}
 	_, err := q.client.PauseOne(t.Hash)
@@ -53,7 +55,6 @@ func (q *Qbittorrent) Pause(hash string) bool {
 func (q *Qbittorrent) Resume(hash string) bool {
 	t := q.Show(hash)
 	if t == nil {
-		log.Println("Bad torrent hash!")
 		return false
 	}
 	_, err := q.client.ResumeOne(t.Hash)
@@ -66,7 +67,6 @@ func (q *Qbittorrent) Resume(hash string) bool {
 func (q *Qbittorrent) Delete(hash string, deleteFiles bool) bool {
 	t := q.Show(hash)
 	if t == nil {
-		log.Println("Bad torrent hash!")
 		return false
 	}
 	_, err := q.client.DeleteOne(t.Hash, deleteFiles)
@@ -77,50 +77,38 @@ func (q *Qbittorrent) Delete(hash string, deleteFiles bool) bool {
 }
 
 func (q *Qbittorrent) List() *Torrents {
-	qtorrents, err := q.client.Torrents(qbt.TorrentsOptions{})
-
-	log.Println(qtorrents)
-
 	newTorrents := Torrents{}
-
+	torrents, err := q.client.Torrents(qbt.TorrentsOptions{})
 	if err != nil {
 		log.Println("Can't get torrents:", err)
 		return nil
-	} else {
-		if len(qtorrents) > 0 {
-			log.Println(len(qtorrents))
-			for _, t := range qtorrents {
-
-				eta := int(t.Eta)
-				if eta == 8640000 {
-					eta = 0
-				}
-
-				progress := float64(0)
-				if t.Size != 0 {
-					progress = float64(t.Downloaded*100) / float64(t.Size)
-				}
-
-				tor := Torrent{
-					Title:    t.Name,
-					Hash:     t.Hash,
-					State:    t.State,
-					Speed:    int(t.Dlspeed),
-					Progress: progress,
-					Category: t.Category,
-					Size:     int(t.Size),
-					Seeds:    int(t.NumSeeds),
-					Eta:      eta,
-				}
-
-				newTorrents = append(newTorrents, tor)
-
+	}
+	if len(torrents) > 0 {
+		for _, t := range torrents {
+			eta := int(t.Eta)
+			if eta == 8640000 {
+				eta = 0
 			}
-			return &newTorrents
-		} else {
-			fmt.Println("No torrents found")
-			return &newTorrents
+			progress := float64(0)
+			if t.Size != 0 {
+				progress = float64(t.Downloaded*100) / float64(t.Size)
+			}
+			tor := Torrent{
+				Title:    t.Name,
+				Hash:     t.Hash,
+				State:    t.State,
+				Speed:    int(t.Dlspeed),
+				Progress: progress,
+				Category: t.Category,
+				Size:     int(t.Size),
+				Seeds:    int(t.NumSeeds),
+				Eta:      eta,
+			}
+			newTorrents = append(newTorrents, tor)
 		}
+		return &newTorrents
+	} else {
+		return nil
 	}
 }
 
@@ -134,8 +122,7 @@ func (q *Qbittorrent) Download(movie *torrent.Movie, category string) error {
 		"",
 	)
 
-	log.Println("Downloading")
-	log.Println(movie.Link)
+	log.Println("Downloading: ", movie.Link)
 
 	if err != nil {
 		log.Println(err)

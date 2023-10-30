@@ -108,12 +108,10 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 	switch cmdData.Command {
 	case "dl_f":
 		category = "Фильмы"
-	case "dl_s":
+	case "dl_s", "dl_w":
 		category = "Сериалы"
 	case "dl_t":
 		category = "Телешоу"
-	case "dl_w":
-		category = "watch"
 	default:
 		log.Println("Unknown category!")
 		return
@@ -127,6 +125,10 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 	}
 
 	deleteMsgs()
+
+	if cmdData.Command == "dl_w" {
+		category = "watch"
+	}
 	err = cmd.downloadMessage(&mov, inputMessage.Chat.ID, category, cmdData.RootMessageId)
 	if err != nil {
 		log.Println("DownloadMovie: send error", err)
@@ -199,7 +201,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 	sendErrorMsg := func(msgTxt string) {
 		errMsg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgTxt)
-		errMsg.ReplyToMessageID = inputMessage.MessageID
+		errMsg.ReplyToMessageID = parsedData.RootMessageId
 		cmd.bot.Send(errMsg)
 	}
 
@@ -366,7 +368,6 @@ func (cmd *Commander) downloadMessage(mov *torrent.Movie, chatId int64, category
 
 	msgText := fmt.Sprintf("Качаю %s (%.2f Gb) с <TRACKER> в %s",
 		mov.Title, float64(mov.Size)/float64(1024*1024*1024), category)
-
 	msgText = strings.Replace(msgText, "<TRACKER>", fmt.Sprintf("[%s](%s)", mov.Tracker, mov.Link), 1)
 
 	if watchTxt {
