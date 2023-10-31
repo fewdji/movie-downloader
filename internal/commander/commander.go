@@ -9,6 +9,7 @@ import (
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
+	"movie-downloader-bot/internal/tracker"
 	"movie-downloader-bot/pkg/helper"
 	"os"
 	"regexp"
@@ -20,8 +21,9 @@ type Commander struct {
 	bot     *tgbotapi.BotAPI
 	meta    meta.Parser
 	torrent torrent.Parser
-	cache   cache.Cache
 	client  client.Client
+	tracker *tracker.Tracker
+	cache   cache.Cache
 }
 
 type CommandData struct {
@@ -33,12 +35,13 @@ type CommandData struct {
 	Offset         int    `json:"o"`
 }
 
-func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client, cache cache.Cache) *Commander {
+func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client, tracker *tracker.Tracker, cache cache.Cache) *Commander {
 	return &Commander{
 		bot:     bot,
 		meta:    meta,
 		torrent: torrent,
 		client:  client,
+		tracker: tracker,
 		cache:   cache,
 	}
 }

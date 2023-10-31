@@ -9,6 +9,8 @@ import (
 	"movie-downloader-bot/internal/commander"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
+	"movie-downloader-bot/internal/storage"
+	"movie-downloader-bot/internal/tracker"
 	"os"
 	"strconv"
 )
@@ -30,21 +32,23 @@ func main() {
 	updateConfig := tgbotapi.UpdateConfig{}
 	updates := bot.GetUpdatesChan(updateConfig)
 
-	cache := cache.NewRedis()
-	kpParser := meta.NewKpParser(cache)
+	rCache := cache.NewRedis()
+	kpParser := meta.NewKpParser(rCache)
 	tParser := torrent.NewJackettParser()
-	client := client.NewQbittorrent()
+	qClient := client.NewQbittorrent()
+	storage := storage.NewPostgres()
+	tracker := tracker.NewTracker(kpParser, tParser, qClient, storage)
 
 	commander := commands.NewCommander(
 		bot,
 		kpParser,
 		tParser,
-		client,
-		cache,
+		qClient,
+		tracker,
+		rCache,
 	)
 
-	//tasker := tasks.NewTasker()
-	//go tasker.Monitor()
+	go tracker.Run()
 
 	for update := range updates {
 		commander.HandleUpdate(update)
