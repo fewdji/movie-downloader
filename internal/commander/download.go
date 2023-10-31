@@ -97,7 +97,7 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 
 	mov := torrent.Movie{}
 
-	err := cmd.cache.Get(cmd.ctx, cmdData.Key).Scan(&mov)
+	err := cmd.cache.Scan(cmdData.Key, &mov)
 	if err != nil {
 		log.Println("DownloadMovie: bad cache, metaMovie not found", err)
 		sendErrorMsg("Ошибка кэша, не удалось идентифицировать фильм!")
@@ -246,7 +246,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 	for i := cmdData.Offset; i < top; i++ {
 		cacheKey = helper.Hash(movs[i].Link)
-		err = cmd.cache.SetEx(cmd.ctx, cacheKey, movs[i], time.Hour).Err()
+		err = cmd.cache.Set(cacheKey, movs[i], time.Hour)
 		if err != nil {
 			log.Println("ShowMovieList: cache error:", err)
 			delMetaMsg()
@@ -323,7 +323,7 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, callbackId strin
 
 	mov := torrent.Movie{}
 
-	err := cmd.cache.Get(cmd.ctx, cmdData.Key).Scan(&mov)
+	err := cmd.cache.Scan(cmdData.Key, &mov)
 	if err != nil {
 		log.Println("ShowMovie: сache error", err)
 		sendErrorMsg("Ошибка кэша, не удалось распознать фильм!")

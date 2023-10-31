@@ -24,7 +24,7 @@ type Movie struct {
 	Tracker      string     `json:"tracker"`
 	Link         string     `json:"link"`
 	Published    string     `json:"published"`
-	Size         int        `json:"size"`
+	Size         int64      `json:"size"`
 	Seeds        int        `json:"seeds"`
 	Quality      string     `json:"quality"`
 	Resolution   string     `json:"resolution"`

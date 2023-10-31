@@ -1,11 +1,10 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/redis/go-redis/v9"
 	"log"
+	"movie-downloader-bot/internal/cache"
 	"movie-downloader-bot/internal/client"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
@@ -21,9 +20,8 @@ type Commander struct {
 	bot     *tgbotapi.BotAPI
 	meta    meta.Parser
 	torrent torrent.Parser
-	cache   *redis.Client
+	cache   cache.Cache
 	client  client.Client
-	ctx     context.Context
 }
 
 type CommandData struct {
@@ -35,18 +33,13 @@ type CommandData struct {
 	Offset         int    `json:"o"`
 }
 
-func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client) *Commander {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_HOST"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-	})
+func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser, client client.Client, cache cache.Cache) *Commander {
 	return &Commander{
 		bot:     bot,
 		meta:    meta,
 		torrent: torrent,
 		client:  client,
-		cache:   rdb,
-		ctx:     context.Background(),
+		cache:   cache,
 	}
 }
 

@@ -100,7 +100,7 @@ func (q *Qbittorrent) List() *Torrents {
 				Speed:    int(t.Dlspeed),
 				Progress: progress,
 				Category: t.Category,
-				Size:     int(t.Size),
+				Size:     t.Size,
 				Seeds:    int(t.NumSeeds),
 				Eta:      eta,
 			}

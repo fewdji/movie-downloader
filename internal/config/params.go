@@ -34,14 +34,14 @@ type Params struct {
 		} `json:"exclude"`
 		Limit struct {
 			Auto struct {
-				SizeMin  int `json:"size_min"`
-				SizeMax  int `json:"size_max"`
-				SeedsMin int `json:"seeds_min"`
+				SizeMin  int64 `json:"size_min"`
+				SizeMax  int64 `json:"size_max"`
+				SeedsMin int   `json:"seeds_min"`
 			} `json:"auto"`
 			Manual struct {
-				SizeMin  int `json:"size_min"`
-				SizeMax  int `json:"size_max"`
-				SeedsMin int `json:"seeds_min"`
+				SizeMin  int64 `json:"size_min"`
+				SizeMax  int64 `json:"size_max"`
+				SeedsMin int   `json:"seeds_min"`
 			} `json:"manual"`
 		} `json:"limit"`
 	} `json:"video_filter"`

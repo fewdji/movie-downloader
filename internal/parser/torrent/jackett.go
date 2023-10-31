@@ -32,7 +32,7 @@ type JackettMovie struct {
 	Tracker   string `xml:"jackettindexer"`
 	Link      string `xml:"comments"`
 	Published string `xml:"pubDate"`
-	Size      int    `xml:"size"`
+	Size      int64  `xml:"size"`
 	File      string `xml:"link"`
 	Props     []struct {
 		XMLName xml.Name

@@ -14,7 +14,7 @@ type Client interface {
 type Torrent struct {
 	Hash     string  `json:"hash"`
 	Title    string  `json:"title"`
-	Size     int     `json:"size"`
+	Size     int64   `json:"size"`
 	State    string  `json:"state"`
 	Speed    int     `json:"speed"`
 	Progress float64 `json:"progress"`

@@ -36,8 +36,6 @@ func (movs *Movies) GetBest() *Movie {
 		}
 	}
 
-	//println(len(bests))
-
 	if len(bests) == 0 {
 		return nil
 	}
@@ -119,7 +117,7 @@ func (movs *Movies) MinSeeds(seedsNum int) *Movies {
 	return movs
 }
 
-func (movs *Movies) SizeLimits(min, max int) *Movies {
+func (movs *Movies) SizeLimits(min, max int64) *Movies {
 	for i := 0; i < len(*movs); i++ {
 		sizeMb := (*movs)[i].Size / (1024 * 1024)
 		if (sizeMb < min && min != 0) || (sizeMb > max && max != 0) {

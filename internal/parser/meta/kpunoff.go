@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"movie-downloader-bot/internal/cache"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ import (
 type KpParser struct {
 	url   string
 	token string
+	cache cache.Cache
 }
 
 type KpSearchResult struct {
@@ -36,11 +38,23 @@ type KpMovie struct {
 	Completed    bool        `json:"completed"`
 }
 
-func NewKpParser() *KpParser {
+func NewKpParser(cache cache.Cache) *KpParser {
 	return &KpParser{
 		url:   os.Getenv("KP_API_URL"),
 		token: os.Getenv("KP_API_TOKEN"),
+		cache: cache,
 	}
+}
+
+func (kpMovie KpMovie) MarshalBinary() ([]byte, error) {
+	return json.Marshal(kpMovie)
+}
+
+func (kpMovie *KpMovie) UnmarshalBinary(data []byte) error {
+	if err := json.Unmarshal(data, &kpMovie); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
@@ -75,9 +89,24 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
 	kpMovie := new(KpMovie)
-	err := p.makeRequest(apiUrl, &kpMovie)
+
+	cacheKey := "kp" + strconv.Itoa(kpId)
+	err := p.cache.Scan(cacheKey, kpMovie)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("GetByKpId: not found in cache:", err)
+		err = p.makeRequest(apiUrl, kpMovie)
+		if err != nil {
+			log.Println("GetByKpId: makeRequest error:", err)
+			return nil
+		}
+		err = p.cache.Set(cacheKey, kpMovie, time.Hour*12)
+		if err != nil {
+			log.Println("GetByKpId set cache error:", err)
+		} else {
+			log.Println("GetByKpId: saved to cache!")
+		}
+	} else {
+		log.Println("GetByKpId: got from cache!")
 	}
 
 	if kpMovie.Year == nil || kpMovie.NameRu == "" {

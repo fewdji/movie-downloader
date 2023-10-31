@@ -4,6 +4,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"log"
+	"movie-downloader-bot/internal/cache"
 	"movie-downloader-bot/internal/client"
 	"movie-downloader-bot/internal/commander"
 	"movie-downloader-bot/internal/parser/meta"
@@ -29,10 +30,18 @@ func main() {
 	updateConfig := tgbotapi.UpdateConfig{}
 	updates := bot.GetUpdatesChan(updateConfig)
 
-	kpParser := meta.NewKpParser()
+	cache := cache.NewRedis()
+	kpParser := meta.NewKpParser(cache)
 	tParser := torrent.NewJackettParser()
 	client := client.NewQbittorrent()
-	commander := commands.NewCommander(bot, kpParser, tParser, client)
+
+	commander := commands.NewCommander(
+		bot,
+		kpParser,
+		tParser,
+		client,
+		cache,
+	)
 
 	//tasker := tasks.NewTasker()
 	//go tasker.Monitor()

@@ -119,12 +119,17 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	}
 
 	var rows [][]tgbotapi.InlineKeyboardButton
-	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", clbCancel),
-		tgbotapi.NewInlineKeyboardButtonData("Назад", clbBack)),
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Запустить", clbRun),
+
+		tgbotapi.NewInlineKeyboardButtonData("Остановить", clbPause)),
+
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Удалить торрент", clbDel),
 			tgbotapi.NewInlineKeyboardButtonData("Удалить файл", clbDelFile)),
-		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Остановить", clbPause),
-			tgbotapi.NewInlineKeyboardButtonData("Запустить", clbRun)),
+
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", clbCancel),
+			tgbotapi.NewInlineKeyboardButtonData("Назад", clbBack)),
+
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Обновить", clbUpdate)))
 
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgText)
