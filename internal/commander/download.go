@@ -107,11 +107,11 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 	var category string
 
 	switch cmdData.Command {
-	case "dl_f":
+	case "df":
 		category = "Фильмы"
-	case "dl_s", "dl_w":
+	case "ds", "dw":
 		category = "Сериалы"
-	case "dl_t":
+	case "dt":
 		category = "Телешоу"
 	default:
 		log.Println("Unknown category!")
@@ -127,7 +127,7 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 
 	deleteMsgs()
 
-	if cmdData.Command == "dl_w" {
+	if cmdData.Command == "dw" {
 		category = "watch"
 	}
 	err = cmd.downloadMessage(&mov, inputMessage.Chat.ID, category, cmdData.RootMessageId)
@@ -164,7 +164,7 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 	i := 0
 	for _, mov := range metaMovies {
 		if isDownload && mov.Type == torrent.FILM_TYPE {
-			cmdData.Command = "mm_down"
+			cmdData.Command = "bd"
 		} else {
 			cmdData.Command = "l"
 		}
@@ -173,7 +173,7 @@ func (cmd *Commander) ShowMetaMovieList(inputMessage *tgbotapi.Message, cmdData 
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s (%d)", mov.NameRu, mov.Year), string(serializedData))))
 		i++
 		if i == found || i > limit-1 {
-			cmdData.Command = "cancel"
+			cmdData.Command = "cnl"
 			serializedData, _ = json.Marshal(cmdData)
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
 			break
@@ -220,7 +220,6 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		sendErrorMsg("Ошибка кэша, связанный фильм не найден!")
 		return
 	}
-	log.Println("ShowMovieList: metaMovie found: ", metaMovie.NameRu)
 	res := cmd.torrent.Find(metaMovie).BaseFilter()
 
 	if metaMovie.Type != torrent.FILM_TYPE {
@@ -294,7 +293,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		rows = append(rows, btns)
 	}
 
-	parsedData.Command = "cancel"
+	parsedData.Command = "cnl"
 	serializedData, _ := json.Marshal(parsedData)
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("Отмена", string(serializedData))))
 
@@ -335,11 +334,11 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, callbackId strin
 	serializedData, err := json.Marshal(cmdData)
 
 	clb := string(serializedData)
-	clbFilm := strings.Replace(clb, "placeholder", "dl_s", 1)
-	clbSeries := strings.Replace(clb, "placeholder", "dl_s", 1)
-	clbShow := strings.Replace(clb, "placeholder", "dl_t", 1)
-	clbWatch := strings.Replace(clb, "placeholder", "dl_w", 1)
-	clbCancel := strings.Replace(clb, "placeholder", "cancel", 1)
+	clbFilm := strings.Replace(clb, "placeholder", "df", 1)
+	clbSeries := strings.Replace(clb, "placeholder", "ds", 1)
+	clbShow := strings.Replace(clb, "placeholder", "dt", 1)
+	clbWatch := strings.Replace(clb, "placeholder", "dw", 1)
+	clbCancel := strings.Replace(clb, "placeholder", "cnl", 1)
 	clbDel := strings.Replace(clb, "placeholder", "del", 1)
 
 	pubDate, _ := time.Parse(time.RFC1123Z, mov.Published)

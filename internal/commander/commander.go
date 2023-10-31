@@ -9,7 +9,7 @@ import (
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/meta"
 	"movie-downloader-bot/internal/parser/torrent"
-	"movie-downloader-bot/internal/tracker"
+	tracker "movie-downloader-bot/internal/tracker"
 	"movie-downloader-bot/pkg/helper"
 	"os"
 	"regexp"
@@ -47,11 +47,11 @@ func NewCommander(bot *tgbotapi.BotAPI, meta meta.Parser, torrent torrent.Parser
 }
 
 func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
-	//defer func() {
-	//	if panicValue := recover(); panicValue != nil {
-	//		log.Printf("Recovered from panic: %v", panicValue)
-	//	}
-	//}()
+	defer func() {
+		if panicValue := recover(); panicValue != nil && os.Getenv("ENV_DEBUG") != "true" {
+			log.Print("Recovered from panic:", panicValue)
+		}
+	}()
 
 	// Handle callbacks
 	if update.CallbackQuery != nil {
@@ -65,32 +65,28 @@ func (cmd *Commander) HandleUpdate(update tgbotapi.Update) {
 
 		switch cmdData.Command {
 		case "del":
-			log.Println("del callback")
 			cmd.DeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
 
-		case "cancel":
-			log.Println("cancel callback")
+		case "cnl":
 			cmd.DeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, cmdData.MovieMessageId, cmdData.MetaMessageId, cmdData.RootMessageId)
 			cmdData = CommandData{}
 
-		case "mm_down":
+		case "bd":
 			cmd.DownloadBest(update.CallbackQuery.Message, cmdData)
 
 		case "l":
-			log.Println("Torrent callback!")
 			cmd.ShowMovieList(update.CallbackQuery.Message, cmdData)
 
 		case "s":
-			log.Println("Movie show callback!")
 			cmd.ShowMovie(update.CallbackQuery.Message, update.CallbackQuery.ID, cmdData)
 
-		case "dl_f", "dl_s", "dl_t", "dl_w":
+		case "df", "ds", "dt", "dw":
 			cmd.DownloadMovie(update.CallbackQuery.Message, cmdData)
 
-		case "t_l":
+		case "tl":
 			cmd.ShowTorrentList(update.CallbackQuery.Message, cmdData)
 
-		case "t_sh", "t_c", "t_p", "t_r", "t_rf":
+		case "ts", "tc", "tp", "tr", "tf":
 			cmd.ShowTorrent(update.CallbackQuery.Message, update.CallbackQuery.ID, cmdData)
 
 		default:

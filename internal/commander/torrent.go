@@ -22,7 +22,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 	torrents := cmd.client.List()
 
 	if torrents == nil {
-		log.Println("ShowTorrentList: no active torrents!")
+		log.Println("ShowTorrentList: no active torrents")
 		if cmdData.Command != "" {
 			delMsg()
 		}
@@ -30,7 +30,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 		return
 	}
 
-	cmdData.Command = "t_sh"
+	cmdData.Command = "ts"
 	var rows [][]tgbotapi.InlineKeyboardButton
 	for _, torrent := range *torrents {
 		cmdData.Key = torrent.Hash[0:8]
@@ -42,7 +42,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 
 	cmdData.Command = "del"
 	cancel, _ := json.Marshal(cmdData)
-	refresh := strings.Replace(string(cancel), "del", "t_l", 1)
+	refresh := strings.Replace(string(cancel), "del", "tl", 1)
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Отмена", string(cancel)),
 		tgbotapi.NewInlineKeyboardButtonData("Обновить", refresh)))
@@ -85,14 +85,14 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	}
 
 	switch cmdData.Command {
-	case "t_p":
+	case "tp":
 		cmd.client.Pause(cmdData.Key)
 		sendClbk("Торрент остановлен!")
-	case "t_c":
+	case "tc":
 		cmd.client.Resume(cmdData.Key)
 		sendClbk("Торрент запущен!")
-	case "t_r", "t_rf":
-		cmd.client.Delete(cmdData.Key, cmdData.Command == "t_rf")
+	case "tr", "tf":
+		cmd.client.Delete(cmdData.Key, cmdData.Command == "tf")
 		sendClbk("Торрент удален!")
 		delMsg()
 		cmd.ShowTorrentList(inputMessage, cmdData)
@@ -103,12 +103,12 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	serializedData, err := json.Marshal(cmdData)
 
 	clb := string(serializedData)
-	clbRun := strings.Replace(clb, "placeholder", "t_c", 1)
-	clbPause := strings.Replace(clb, "placeholder", "t_p", 1)
-	clbDel := strings.Replace(clb, "placeholder", "t_r", 1)
-	clbDelFile := strings.Replace(clb, "placeholder", "t_rf", 1)
-	clbUpdate := strings.Replace(clb, "placeholder", "t_sh", 1)
-	clbBack := strings.Replace(clb, "placeholder", "t_l", 1)
+	clbRun := strings.Replace(clb, "placeholder", "tc", 1)
+	clbPause := strings.Replace(clb, "placeholder", "tp", 1)
+	clbDel := strings.Replace(clb, "placeholder", "tr", 1)
+	clbDelFile := strings.Replace(clb, "placeholder", "tf", 1)
+	clbUpdate := strings.Replace(clb, "placeholder", "ts", 1)
+	clbBack := strings.Replace(clb, "placeholder", "tl", 1)
 	clbCancel := strings.Replace(clb, "placeholder", "del", 1)
 
 	msgText := fmt.Sprintf("*%s*\nСостояние: %s\nРазмер: %.2f Gb\nЗагружено: %.2f%%\nСиды: %d",

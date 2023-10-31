@@ -97,20 +97,20 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
 	cacheKey := "kp" + strconv.Itoa(kpId)
 	err := p.cache.Scan(cacheKey, kpMovie)
 	if err != nil {
-		log.Println("GetByKpId: not found in cache:", err)
+		log.Println("GetByKpId: not found in cache", err)
 		err = p.makeRequest(apiUrl, kpMovie)
 		if err != nil {
-			log.Println("GetByKpId: makeRequest error:", err)
+			log.Println("GetByKpId: makeRequest error", err)
 			return nil
 		}
 		err = p.cache.Set(cacheKey, kpMovie, time.Hour*12)
 		if err != nil {
-			log.Println("GetByKpId set cache error:", err)
+			log.Println("GetByKpId: set cache error", err)
 		} else {
-			log.Println("GetByKpId: saved to cache!")
+			log.Println("GetByKpId: saved to cache")
 		}
 	} else {
-		log.Println("GetByKpId: got from cache!")
+		log.Println("GetByKpId: got from cache")
 	}
 
 	if kpMovie.Year == nil || kpMovie.NameRu == "" {

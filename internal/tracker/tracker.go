@@ -1,4 +1,4 @@
-package tracker
+package tracking
 
 import (
 	"fmt"
@@ -46,7 +46,7 @@ func NewTracker(mParser meta.Parser, tParser torrent.Parser, client client.Clien
 func (t *Tracker) Run() {
 	for {
 		err := t.storage.CreateSchema()
-		err = t.storage.Monitor()
+		//err = t.storage.Monitor()
 		if err != nil {
 			log.Println(err)
 			return

@@ -12,7 +12,7 @@ func (cmd *Commander) DeleteMessage(chatID int64, messageId ...int) {
 	for _, msgId := range messageId {
 		_, err := cmd.bot.Request(tgbotapi.NewDeleteMessage(chatID, msgId))
 		if err != nil {
-			log.Println("DeleteMessage:", err)
+			log.Println("DeleteMessage error:", err)
 		}
 	}
 }

@@ -71,7 +71,6 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 	for _, tracker := range trackers {
 		tracker := tracker
 		go func() {
-			log.Println("Gorutine for Ru started for ", tracker)
 			searchF := metaMovie.NameRu
 			respF, err := prs.makeRequest(searchF, tracker)
 			if err != nil {
@@ -80,12 +79,10 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respF.JackettMovies...)
-			log.Println("Gorutin for Ru End for ", tracker)
 			defer wg.Done()
 		}()
 
 		go func() {
-			log.Println("Gorutin for Orig started for ", tracker)
 			searchS := metaMovie.NameOriginal
 			if metaMovie.NameOriginal == "" {
 				searchS = metaMovie.NameRu + " " + strconv.Itoa(metaMovie.Year)
@@ -97,13 +94,12 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 				return
 			}
 			searchResult.JackettMovies = append(searchResult.JackettMovies, respS.JackettMovies...)
-			log.Println("Gorutin for Orig End for ", tracker)
 			defer wg.Done()
 		}()
 
 	}
 	wg.Wait()
-	log.Println("End process")
+	log.Println("...Jackett requests completed")
 
 	torrentMovies := Movies{}
 
@@ -158,18 +154,15 @@ func (prs *JackettParser) makeRequest(query string, tracker string) (result *Jac
 	}
 	resp, err := client.Get(apiUrl)
 	if err != nil {
-		log.Println("No resp: ", err)
 		return nil, err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Bad resp: ", err)
 		return nil, err
 	}
 	searchResults := new(JackettSearchResult)
 	err = xml.Unmarshal(body, &searchResults)
 	if err != nil {
-		log.Println("Invalid json response", err)
 		return nil, err
 	}
 	return searchResults, nil
