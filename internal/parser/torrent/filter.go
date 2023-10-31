@@ -194,9 +194,29 @@ func (movs *Movies) NoDisks() *Movies {
 	return movs.remover(params.Get().VideoFilter.Exclude.Disks)
 }
 
-func (movs *Movies) SortBySizeAsc() *Movies {
+func (movs *Movies) SortBySizeDesc() *Movies {
 	sort.Slice(*movs, func(i, j int) bool {
-		return (*movs)[i].Size < (*movs)[j].Size
+		return (*movs)[i].Size > (*movs)[j].Size
+	})
+	return movs
+}
+
+func (movs *Movies) SortAsSeries() *Movies {
+	sort.Slice(*movs, func(i, j int) bool {
+		ti := strings.Split((*movs)[i].SeasonInfo, "-")
+		tj := strings.Split((*movs)[j].SeasonInfo, "-")
+		si, err := strconv.Atoi(ti[0])
+		if err != nil {
+			si = 1000
+		}
+		sj, err := strconv.Atoi(tj[0])
+		if err != nil {
+			sj = 1000
+		}
+		if si == sj {
+			return (*movs)[i].Size > (*movs)[j].Size
+		}
+		return si < sj
 	})
 	return movs
 }

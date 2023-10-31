@@ -5,6 +5,7 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
+	"math"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/internal/parser/torrent"
 	"movie-downloader-bot/pkg/helper"
@@ -220,7 +221,15 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		return
 	}
 	log.Println("ShowMovieList: metaMovie found: ", metaMovie.NameRu)
-	movs := *cmd.torrent.Find(metaMovie).BaseFilter().SortBySizeAsc()
+	res := cmd.torrent.Find(metaMovie).BaseFilter()
+
+	if metaMovie.Type != torrent.FILM_TYPE {
+		res.SortAsSeries()
+	} else {
+		res.SortBySizeDesc()
+	}
+
+	movs := *res
 
 	found := len(movs)
 	if found == 0 {
@@ -232,9 +241,10 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var cacheKey string
-	limit := 25
+	limit := 10
+	top := int(math.Min(float64(found), float64(cmdData.Offset+limit)))
 
-	for i := cmdData.Offset; i < found && i < cmdData.Offset+limit; i++ {
+	for i := cmdData.Offset; i < top; i++ {
 		cacheKey = helper.Hash(movs[i].Link)
 		err = cmd.cache.SetEx(cmd.ctx, cacheKey, movs[i], time.Hour).Err()
 		if err != nil {
@@ -248,7 +258,6 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		serializedData, _ := json.Marshal(parsedData)
 
 		season := " "
-
 		if movs[i].SeasonInfo != "" {
 			season += "{S" + movs[i].SeasonInfo + "} "
 		}
@@ -291,7 +300,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 	delMetaMsg()
 
-	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, found))
+	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf(params.Get().StaticText.TorrentMovieSearchTitle, found, cmdData.Offset+1, top))
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	msg.ReplyToMessageID = parsedData.RootMessageId
 
