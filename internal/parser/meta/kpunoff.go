@@ -72,7 +72,11 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 			continue
 		}
 
-		movieYear, _ := strconv.Atoi(kpMovie.Year.(string))
+		movieYear, err := strconv.Atoi(kpMovie.Year.(string))
+		if err != nil || movieYear == 0 {
+			continue
+		}
+
 		metaMovie := Movie{
 			Id:           kpMovie.KpId,
 			Type:         kpMovie.Type,
