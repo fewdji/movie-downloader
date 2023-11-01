@@ -56,7 +56,7 @@ func (t *Tracker) Run() {
 	}
 }
 
-func (t *Tracker) Add(movie meta.Movie) error {
+func (t *Tracker) Add(movie *torrent.Movie) error {
 
 	return nil
 }

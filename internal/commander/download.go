@@ -76,7 +76,7 @@ func (cmd *Commander) DownloadBest(inputMessage *tgbotapi.Message, cmdData Comma
 	}
 
 	delLastMsgIfClbk()
-	err = cmd.downloadMessage(mov, inputMessage.Chat.ID, "Фильмы", replyToMessageID)
+	err = cmd.downloadMessage(mov, inputMessage.Chat.ID, "Фильмы", 0, replyToMessageID)
 	if err != nil {
 		log.Println("DownloadBest: send error", err)
 		sendErrorMsg("Не удалось отправить сообщение о начале загрузки!")
@@ -127,10 +127,17 @@ func (cmd *Commander) DownloadMovie(inputMessage *tgbotapi.Message, cmdData Comm
 
 	deleteMsgs()
 
+	track := 0
 	if cmdData.Command == "dw" {
-		category = "watch"
+		track = 1
+		err = cmd.tracker.Add(&mov)
+		if err != nil {
+			log.Println("DownloadMovie: tracking error", err)
+			track = -1
+		}
 	}
-	err = cmd.downloadMessage(&mov, inputMessage.Chat.ID, category, cmdData.RootMessageId)
+
+	err = cmd.downloadMessage(&mov, inputMessage.Chat.ID, category, track, cmdData.RootMessageId)
 	if err != nil {
 		log.Println("DownloadMovie: send error", err)
 		sendErrorMsg("Не удалось отправить сообщение о начале загрузки!")
@@ -215,7 +222,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 	metaMovie := cmd.meta.GetByKpId(movieId)
 	if metaMovie == nil {
-		log.Println("ShowMovieList: metaMovie not found!")
+		log.Println("ShowMovieList: metaMovie not found")
 		delMetaMsg()
 		sendErrorMsg("Ошибка кэша, связанный фильм не найден!")
 		return
@@ -232,7 +239,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 
 	found := len(movs)
 	if found == 0 {
-		log.Println("ShowMovieList: movies not found!")
+		log.Println("ShowMovieList: movies not found")
 		delMetaMsg()
 		sendErrorMsg("Фильм не найден на трекерах!")
 		return
@@ -247,7 +254,7 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 		cacheKey = helper.Hash(movs[i].Link)
 		err = cmd.cache.Set(cacheKey, movs[i], time.Hour)
 		if err != nil {
-			log.Println("ShowMovieList: cache error:", err)
+			log.Println("ShowMovieList: cache error", err)
 			delMetaMsg()
 			sendErrorMsg("Ошибка кэша, невозможно сформировать список торрентов!")
 			return
@@ -382,19 +389,16 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, callbackId strin
 	}
 }
 
-func (cmd *Commander) downloadMessage(mov *torrent.Movie, chatId int64, category string, replyToMessageId int) error {
-	watchTxt := false
-	if category == "watch" {
-		category = "Сериалы"
-		watchTxt = true
-	}
-
-	msgText := fmt.Sprintf("Качаю %s (%.2f Gb) с <TRACKER> в %s",
+func (cmd *Commander) downloadMessage(mov *torrent.Movie, chatId int64, category string, track int, replyToMessageId int) error {
+	msgText := fmt.Sprintf("Загружаю %s (%.2f Gb) с <TRACKER> в %s",
 		mov.Title, float64(mov.Size)/float64(1024*1024*1024), category)
 	msgText = strings.Replace(msgText, "<TRACKER>", fmt.Sprintf("[%s](%s)", mov.Tracker, mov.Link), 1)
 
-	if watchTxt {
-		msgText += "\n\n*Новые серии будут докачиваться по мере обновления торрента*"
+	switch track {
+	case 1:
+		msgText += "\n\n*Новые серии будут загружаться по мере обновления торрента*"
+	case -1:
+		msgText += "\n\n*Не удалось настроить отслеживание новых серий!*"
 	}
 
 	msg := tgbotapi.NewMessage(chatId, msgText)
