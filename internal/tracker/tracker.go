@@ -2,7 +2,6 @@ package tracking
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"movie-downloader-bot/internal/client"
 	"movie-downloader-bot/internal/parser/meta"
@@ -29,9 +28,9 @@ func NewTracker(mParser meta.Parser, tParser torrent.Parser, client client.Clien
 
 func (t *Tracker) Run() {
 	for {
-		fmt.Println("tracker task started...")
+		log.Println("tracker task started...")
 		t.CheckAndUpdate()
-		fmt.Println("...tracker task finished")
+		log.Println("...tracker task finished")
 		time.Sleep(time.Minute * 15)
 	}
 }
