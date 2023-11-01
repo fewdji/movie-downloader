@@ -90,19 +90,12 @@ func (q *Qbittorrent) List() *client.Torrents {
 			if eta == 8640000 {
 				eta = 0
 			}
-			progress := float64(0)
-			if t.Size != 0 {
-				progress = float64(t.Downloaded*100) + 0.001/float64(t.Size)
-				if progress > 100 {
-					progress = float64(100)
-				}
-			}
 			tor := client.Torrent{
 				Title:    t.Name,
 				Hash:     t.Hash,
 				State:    t.State,
 				Speed:    int(t.Dlspeed),
-				Progress: progress,
+				Progress: t.Progress * 100,
 				Category: t.Category,
 				Size:     t.Size,
 				Seeds:    int(t.NumSeeds),

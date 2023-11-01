@@ -90,7 +90,7 @@ type TorrentInfo struct {
 	NumLeechs         int64   `json:"num_leechs"`
 	NumSeeds          int64   `json:"num_seeds"`
 	Priority          int64   `json:"priority"`
-	Progress          int64   `json:"progress"`
+	Progress          float64 `json:"progress"`
 	Ratio             float64 `json:"ratio"`
 	RatioLimit        int64   `json:"ratio_limit"`
 	SavePath          string  `json:"save_path"`
