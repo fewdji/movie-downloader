@@ -92,7 +92,7 @@ func (q *Qbittorrent) List() *client.Torrents {
 			}
 			progress := float64(0)
 			if t.Size != 0 {
-				progress = float64(t.Downloaded*100) / float64(t.Size)
+				progress = float64(t.Downloaded*100) + 0.001/float64(t.Size)
 				if progress > 100 {
 					progress = float64(100)
 				}
