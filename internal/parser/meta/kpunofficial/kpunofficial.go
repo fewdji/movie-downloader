@@ -1,4 +1,4 @@
-package meta
+package kpunofficial
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"movie-downloader-bot/internal/cache"
+	"movie-downloader-bot/internal/parser/meta"
 	"net/http"
 	"net/url"
 	"os"
@@ -57,7 +58,7 @@ func (kpMovie *KpMovie) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
+func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []meta.Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.1/films/search-by-keyword?keyword=%s", p.url, url.QueryEscape(movieTitle))
 	kpSearchResult := new(KpSearchResult)
 
@@ -77,7 +78,7 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 			continue
 		}
 
-		metaMovie := Movie{
+		metaMovie := meta.Movie{
 			Id:           kpMovie.KpId,
 			Type:         kpMovie.Type,
 			NameRu:       kpMovie.NameRu,
@@ -89,7 +90,7 @@ func (p *KpParser) FindByTitle(movieTitle string) (metaMovies []Movie) {
 	return
 }
 
-func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
+func (p *KpParser) GetByKpId(kpId int) (metaMovie *meta.Movie) {
 	apiUrl := fmt.Sprintf("%s/v2.2/films/%d", p.url, kpId)
 
 	kpMovie := new(KpMovie)
@@ -123,7 +124,7 @@ func (p *KpParser) GetByKpId(kpId int) (metaMovie *Movie) {
 		movieLength = int(v)
 	}
 
-	metaMovie = &Movie{
+	metaMovie = &meta.Movie{
 		Id:           kpId,
 		Type:         kpMovie.Type,
 		NameRu:       kpMovie.NameRu,

@@ -1,4 +1,4 @@
-package torrent
+package jackett
 
 import (
 	"encoding/xml"
@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"movie-downloader-bot/internal/parser/meta"
+	"movie-downloader-bot/internal/parser/torrent"
 	"movie-downloader-bot/pkg/helper"
 	"net/http"
 	"net/url"
@@ -54,7 +55,7 @@ func NewJackettParser() *JackettParser {
 	}
 }
 
-func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
+func (prs *JackettParser) Find(metaMovie *meta.Movie) *torrent.Movies {
 	var searchResult JackettSearchResult
 
 	var trackers []string
@@ -101,7 +102,7 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 	wg.Wait()
 	log.Println("...Jackett requests completed")
 
-	torrentMovies := Movies{}
+	torrentMovies := torrent.Movies{}
 
 	unique := map[string]bool{}
 	var uniqueKey string
@@ -123,7 +124,7 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *Movies {
 
 		jackettMovie.setSeeds()
 
-		torrentMovie := Movie{
+		torrentMovie := torrent.Movie{
 			Meta:         *metaMovie,
 			Title:        jackettMovie.Title,
 			Tracker:      jackettMovie.Tracker,

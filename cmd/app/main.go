@@ -4,13 +4,13 @@ import (
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 	"log"
-	"movie-downloader-bot/internal/cache"
-	"movie-downloader-bot/internal/client"
+	"movie-downloader-bot/internal/cache/redis"
+	"movie-downloader-bot/internal/client/qbittorrent"
 	"movie-downloader-bot/internal/commander"
-	"movie-downloader-bot/internal/parser/meta"
-	"movie-downloader-bot/internal/parser/torrent"
-	"movie-downloader-bot/internal/storage"
-	tracker "movie-downloader-bot/internal/tracker"
+	"movie-downloader-bot/internal/parser/meta/kpunofficial"
+	"movie-downloader-bot/internal/parser/torrent/jackett"
+	"movie-downloader-bot/internal/storage/postgres"
+	tracking "movie-downloader-bot/internal/tracker"
 	"os"
 	"strconv"
 )
@@ -29,13 +29,13 @@ func main() {
 	bot.Debug, _ = strconv.ParseBool(os.Getenv("TG_BOT_DEBUG"))
 	updates := bot.GetUpdatesChan(tgbotapi.UpdateConfig{})
 
-	rCache := cache.NewRedis()
-	kpParser := meta.NewKpParser(rCache)
-	tParser := torrent.NewJackettParser()
-	qClient := client.NewQbittorrent()
-	pStorage := storage.NewPostgres()
+	rCache := redis.NewRedis()
+	kpParser := kpunofficial.NewKpParser(rCache)
+	tParser := jackett.NewJackettParser()
+	qClient := qbittorrent.NewQbittorrent()
+	pStorage := postgres.NewPostgres()
 
-	tracker := tracker.NewTracker(
+	tracker := tracking.NewTracker(
 		kpParser,
 		tParser,
 		qClient,

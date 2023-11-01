@@ -6,10 +6,7 @@ import (
 )
 
 const (
-	FILM_TYPE        = "FILM"
-	SERIES_TYPE      = "TV_SERIES"
-	MINI_SERIES_TYPE = "MINI_SERIES"
-	TV_SHOW_TYPE     = "TV_SHOW"
+	FILM_TYPE = "FILM"
 )
 
 type Parser interface {

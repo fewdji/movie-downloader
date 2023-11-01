@@ -1,16 +1,13 @@
-package storage
+package postgres
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
-	"movie-downloader-bot/internal/parser/torrent"
+	"movie-downloader-bot/internal/storage"
 	"os"
-	"runtime"
-	"time"
 )
 
 const TRACKED_TABLE = "tracked"
@@ -19,39 +16,47 @@ type Postgres struct {
 	db *sql.DB
 }
 
-type TorrentTable struct {
-	Meta    string `field:"meta"`
-	Link    string `field:"link"`
-	Tracker string `field:"tracker"`
-	Title   string `field:"title"`
-	Size    int64  `field:"size"`
-	Created string `field:"created"`
-	Updated string `field:"updated"`
-	Status  int    `field:"status"`
-}
-
 func NewPostgres() *Postgres {
 	connectUrl := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 		os.Getenv("POSTGRES_USERNAME"), os.Getenv("POSTGRES_PASSWORD"),
 		os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_DB"))
-
 	db, err := sql.Open("pgx", connectUrl)
 	if err != nil {
-		log.Println("Postgres connect error:", err)
+		log.Println("postgres connect error:", err)
 	}
 	return &Postgres{
 		db: db,
 	}
 }
 
-func (t *Postgres) Check(movie torrent.Movie) *[]torrent.Movie {
-	for {
-		time.Sleep(time.Second * 10)
-		fmt.Println("Task is working! Goroutine num:", runtime.NumGoroutine())
+func (t *Postgres) Get() (*[]storage.Tracked, error) {
+	err := t.CheckSchema()
+	if err != nil {
+		return nil, err
 	}
+
+	selectQuery := `SELECT meta, link, tracker, title, "size", created, status FROM ` + TRACKED_TABLE + ` WHERE status <> -1;`
+	rows, err := t.db.Query(selectQuery)
+	if err != nil {
+		log.Println(err)
+		return nil, errors.New("bad query")
+	}
+
+	var res []storage.Tracked
+	for rows.Next() {
+		tr := storage.Tracked{}
+		err := rows.Scan(&tr.Meta, &tr.Link, &tr.Tracker, &tr.Title, &tr.Size, &tr.Created, &tr.Status)
+		if err != nil {
+			log.Println("can't recognize row data:", err)
+			return nil, err
+		}
+		res = append(res, tr)
+	}
+
+	return &res, nil
 }
 
-func (t *Postgres) Add(mov *torrent.Movie) error {
+func (t *Postgres) Add(tr *storage.Tracked) error {
 	err := t.CheckSchema()
 	if err != nil {
 		return err
@@ -59,39 +64,45 @@ func (t *Postgres) Add(mov *torrent.Movie) error {
 
 	exists := 0
 	checkMovieExists := `SELECT count(*) FROM ` + TRACKED_TABLE + ` WHERE link = $1;`
-	if err = t.db.QueryRow(checkMovieExists, mov.Link).Scan(&exists); err != nil {
+	if err = t.db.QueryRow(checkMovieExists, tr.Link).Scan(&exists); err != nil {
 		log.Println(err)
 		return errors.New("bad query")
 	}
 	if exists == 1 {
-		log.Println("Movie is already in tracked table")
+		log.Println("movie is already in tracked table")
 		return nil
 	}
 
-	insertQuery := `INSERT INTO ` + TRACKED_TABLE + ` (meta, link, tracker, title, "size", published, status)
-VALUES($1, $2, $3, $4, $5, $6, $7)`
-
-	meta, err := json.Marshal(mov)
-	if err != nil {
-		log.Println("Uninsertable, bad meta json:", err)
-		return err
-	}
-
-	created := time.Now().Format("2006-01-02 15:04:05")
+	insertQuery := `INSERT INTO ` + TRACKED_TABLE + ` (meta, link, tracker, title, "size", created, status) VALUES($1, $2, $3, $4, $5, $6, $7)`
 	_, err = t.db.Exec(insertQuery,
-		string(meta),
-		mov.Link,
-		mov.Tracker,
-		mov.Title,
-		mov.Size,
-		created,
-		0,
+		tr.Meta,
+		tr.Link,
+		tr.Tracker,
+		tr.Title,
+		tr.Size,
+		tr.Created,
+		tr.Status,
 	)
 	if err != nil {
-		log.Println("Postgres insert error:", err)
+		log.Println("postgres insert error:", err)
 		return err
 	}
-	log.Println("Added for tracking", err)
+	return nil
+}
+
+func (t *Postgres) Update(tr *storage.Tracked) error {
+	updateQuery := `UPDATE ` + TRACKED_TABLE + ` SET title = $1, "size" = $2, updated = $3, status = $4 WHERE link = $5`
+	_, err := t.db.Exec(updateQuery,
+		tr.Title,
+		tr.Size,
+		tr.Updated,
+		tr.Status,
+		tr.Link,
+	)
+	if err != nil {
+		log.Println("postgres update error:", err)
+		return err
+	}
 	return nil
 }
 
@@ -113,7 +124,7 @@ func (t *Postgres) CheckSchema() error {
 	   tracker character varying,
 	   title character varying,
 	   size bigint NOT NULL,
-	   published timestamp without time zone,
+	   created timestamp without time zone,
 	   updated timestamp without time zone,
 	   status integer,
 	   PRIMARY KEY (link)
@@ -124,13 +135,13 @@ func (t *Postgres) CheckSchema() error {
 
 	_, err := t.db.Exec(createTableQuery)
 	if err != nil {
-		log.Println("Postgres create table error:", err)
+		log.Println("postgres create table error:", err)
 		return err
 	}
 
 	_, err = t.db.Exec(ownerToQuery)
 	if err != nil {
-		log.Println("Postgres owner error:", err)
+		log.Println("postgres owner error:", err)
 		return err
 	}
 	return nil

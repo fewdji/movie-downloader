@@ -1,8 +1,9 @@
-package client
+package qbittorrent
 
 import (
 	"fmt"
 	"log"
+	"movie-downloader-bot/internal/client"
 	"movie-downloader-bot/internal/parser/torrent"
 	qbt "movie-downloader-bot/pkg/qbittorrent"
 	"os"
@@ -23,7 +24,7 @@ func NewQbittorrent() *Qbittorrent {
 	}
 }
 
-func (q *Qbittorrent) Show(hash string) *Torrent {
+func (q *Qbittorrent) Show(hash string) *client.Torrent {
 	res := q.List()
 	if res == nil {
 		return nil
@@ -76,8 +77,8 @@ func (q *Qbittorrent) Delete(hash string, deleteFiles bool) bool {
 	return true
 }
 
-func (q *Qbittorrent) List() *Torrents {
-	newTorrents := Torrents{}
+func (q *Qbittorrent) List() *client.Torrents {
+	newTorrents := client.Torrents{}
 	torrents, err := q.client.Torrents(qbt.TorrentsOptions{})
 	if err != nil {
 		log.Println("Can't get torrents:", err)
@@ -93,7 +94,7 @@ func (q *Qbittorrent) List() *Torrents {
 			if t.Size != 0 {
 				progress = float64(t.Downloaded*100) / float64(t.Size)
 			}
-			tor := Torrent{
+			tor := client.Torrent{
 				Title:    t.Name,
 				Hash:     t.Hash,
 				State:    t.State,

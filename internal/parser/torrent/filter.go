@@ -24,9 +24,6 @@ func (movs *Movies) GetBest() *Movie {
 
 	for _, preset := range presets {
 		for _, mov := range *movs {
-			//print(mov.Title)
-			//println(mov.Preset, " ", mov.Quality, " ", mov.Bitrate, " | ", mov.Size/(1024*1024))
-			//println(preset)
 			if mov.Preset == preset {
 				bests = append(bests, mov)
 			}
