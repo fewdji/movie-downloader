@@ -45,7 +45,7 @@ func NewTracker(mParser meta.Parser, tParser torrent.Parser, client client.Clien
 
 func (t *Tracker) Run() {
 	for {
-		err := t.storage.CreateSchema()
+		err := t.storage.CheckSchema()
 		//err = t.storage.Monitor()
 		if err != nil {
 			log.Println(err)
@@ -56,7 +56,11 @@ func (t *Tracker) Run() {
 	}
 }
 
-func (t *Tracker) Add(movie *torrent.Movie) error {
-
+func (t *Tracker) Add(mov *torrent.Movie) error {
+	err := t.storage.Add(mov)
+	if err != nil {
+		log.Println("Can't add movie to the storage", err)
+		return err
+	}
 	return nil
 }

@@ -2,6 +2,8 @@ package storage
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
@@ -18,14 +20,14 @@ type Postgres struct {
 }
 
 type TorrentTable struct {
-	Meta      string `json:"meta_string"`
-	Link      string `json:"link"`
-	Tracker   string `json:"tracker"`
-	Title     string `json:"title"`
-	Size      int64  `json:"size"`
-	Published string `json:"published"`
-	Updated   string `json:"updated"`
-	Status    int    `json:"status"`
+	Meta      string `field:"meta"`
+	Link      string `field:"link"`
+	Tracker   string `field:"tracker"`
+	Title     string `field:"title"`
+	Size      int64  `field:"size"`
+	Published string `field:"published"`
+	Updated   string `field:"updated"`
+	Status    int    `field:"status"`
 }
 
 func NewPostgres() *Postgres {
@@ -42,16 +44,6 @@ func NewPostgres() *Postgres {
 	}
 }
 
-//func (t *Postgres) Add(movie torrent.Movie) error {
-//	var greeting string
-//	err := t.conn.QueryRow(context.Background(), "select 'Hello, world!'").Scan(&greeting)
-//	if err != nil {
-//		log.Println("Postgres error: ", err)
-//		return err
-//	}
-//	return nil
-//}
-
 func (t *Postgres) Check(movie torrent.Movie) *[]torrent.Movie {
 	for {
 		time.Sleep(time.Second * 10)
@@ -59,19 +51,31 @@ func (t *Postgres) Check(movie torrent.Movie) *[]torrent.Movie {
 	}
 }
 
-func (t *Postgres) Monitor() error {
-	insertQuery := `INSERT
-INTO tracked (meta, link, tracker, title, "size", published, updated, status)
-VALUES($1, $2, $3, $4, $5, $6, $7, $8)`
+func (t *Postgres) Add(mov *torrent.Movie) error {
+	err := t.CheckSchema()
+	if err != nil {
+		return err
+	}
 
-	_, err := t.db.Exec(insertQuery,
-		`{"size":1}`,
-		`https://rutracker.net/forum/viewtopic.php?t=111`,
-		`rutracker`,
-		`Контейнер 2021`,
-		494602364,
-		`2022-10-26 13:22:34`,
-		`2022-10-26 14:00:01`,
+	insertQuery := `INSERT INTO ` + TRACKED_TABLE + ` (meta, link, tracker, title, "size", published, status)
+VALUES($1, $2, $3, $4, $5, $6, $7)`
+
+	meta, err := json.Marshal(mov)
+	if err != nil {
+		log.Println("Uninsertable, bad meta json:", err)
+		return err
+	}
+
+	pubDate, _ := time.Parse(time.RFC1123Z, mov.Published)
+	mov.Published = pubDate.Format("2006-01-02 15:04:05")
+
+	_, err = t.db.Exec(insertQuery,
+		string(meta),
+		mov.Link,
+		mov.Tracker,
+		mov.Title,
+		mov.Size,
+		mov.Published,
 		0,
 	)
 	if err != nil {
@@ -81,7 +85,19 @@ VALUES($1, $2, $3, $4, $5, $6, $7, $8)`
 	return nil
 }
 
-func (t *Postgres) CreateSchema() error {
+func (t *Postgres) CheckSchema() error {
+	exists := false
+	checkTableExists := `SELECT EXISTS (
+    SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = '` + TRACKED_TABLE + `'
+    );`
+	if err := t.db.QueryRow(checkTableExists).Scan(&exists); err != nil {
+		log.Println(err)
+		return errors.New("bad query")
+	}
+	if exists {
+		return nil
+	}
+
 	createTableQuery := `CREATE TABLE IF NOT EXISTS ` + TRACKED_TABLE + `
 	(
 	   meta json,
