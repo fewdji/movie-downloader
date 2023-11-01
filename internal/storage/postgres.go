@@ -20,14 +20,14 @@ type Postgres struct {
 }
 
 type TorrentTable struct {
-	Meta      string `field:"meta"`
-	Link      string `field:"link"`
-	Tracker   string `field:"tracker"`
-	Title     string `field:"title"`
-	Size      int64  `field:"size"`
-	Published string `field:"published"`
-	Updated   string `field:"updated"`
-	Status    int    `field:"status"`
+	Meta    string `field:"meta"`
+	Link    string `field:"link"`
+	Tracker string `field:"tracker"`
+	Title   string `field:"title"`
+	Size    int64  `field:"size"`
+	Created string `field:"created"`
+	Updated string `field:"updated"`
+	Status  int    `field:"status"`
 }
 
 func NewPostgres() *Postgres {
@@ -57,6 +57,17 @@ func (t *Postgres) Add(mov *torrent.Movie) error {
 		return err
 	}
 
+	exists := 0
+	checkMovieExists := `SELECT count(*) FROM ` + TRACKED_TABLE + ` WHERE link = $1;`
+	if err = t.db.QueryRow(checkMovieExists, mov.Link).Scan(&exists); err != nil {
+		log.Println(err)
+		return errors.New("bad query")
+	}
+	if exists == 1 {
+		log.Println("Movie is already in tracked table")
+		return nil
+	}
+
 	insertQuery := `INSERT INTO ` + TRACKED_TABLE + ` (meta, link, tracker, title, "size", published, status)
 VALUES($1, $2, $3, $4, $5, $6, $7)`
 
@@ -66,35 +77,32 @@ VALUES($1, $2, $3, $4, $5, $6, $7)`
 		return err
 	}
 
-	pubDate, _ := time.Parse(time.RFC1123Z, mov.Published)
-	mov.Published = pubDate.Format("2006-01-02 15:04:05")
-
+	created := time.Now().Format("2006-01-02 15:04:05")
 	_, err = t.db.Exec(insertQuery,
 		string(meta),
 		mov.Link,
 		mov.Tracker,
 		mov.Title,
 		mov.Size,
-		mov.Published,
+		created,
 		0,
 	)
 	if err != nil {
 		log.Println("Postgres insert error:", err)
 		return err
 	}
+	log.Println("Added for tracking", err)
 	return nil
 }
 
 func (t *Postgres) CheckSchema() error {
-	exists := false
-	checkTableExists := `SELECT EXISTS (
-    SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = '` + TRACKED_TABLE + `'
-    );`
+	exists := 0
+	checkTableExists := `SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND tablename = '` + TRACKED_TABLE + `';`
 	if err := t.db.QueryRow(checkTableExists).Scan(&exists); err != nil {
 		log.Println(err)
 		return errors.New("bad query")
 	}
-	if exists {
+	if exists == 1 {
 		return nil
 	}
 
