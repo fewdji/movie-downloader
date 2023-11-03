@@ -116,6 +116,9 @@ func (movs *Movies) MinSeeds(seedsNum int) *Movies {
 
 func (movs *Movies) SizeLimits(min, max int64) *Movies {
 	for i := 0; i < len(*movs); i++ {
+		if (*movs)[i].Meta.Type != FILM_TYPE {
+			continue
+		}
 		sizeMb := (*movs)[i].Size / (1024 * 1024)
 		if (sizeMb < min && min != 0) || (sizeMb > max && max != 0) {
 			*movs = slices.Delete(*movs, i, i+1)

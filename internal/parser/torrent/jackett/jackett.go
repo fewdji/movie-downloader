@@ -71,8 +71,9 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *torrent.Movies {
 	wg.Add(len(trackers) * 2)
 	for _, tracker := range trackers {
 		tracker := tracker
+		searchF, searchS := prs.getSearchStrings(metaMovie)
+
 		go func() {
-			searchF := metaMovie.NameRu
 			respF, err := prs.makeRequest(searchF, tracker)
 			if err != nil {
 				log.Println("Timeout:", err)
@@ -84,9 +85,9 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *torrent.Movies {
 		}()
 
 		go func() {
-			searchS := metaMovie.NameOriginal
-			if metaMovie.NameOriginal == "" {
-				searchS = metaMovie.NameRu + " " + strconv.Itoa(metaMovie.Year)
+			if searchS == "" {
+				wg.Done()
+				return
 			}
 			respS, err := prs.makeRequest(searchS, tracker)
 			if err != nil {
@@ -175,4 +176,18 @@ func (mov *JackettMovie) setSeeds() {
 			mov.Seeds, _ = strconv.Atoi(attr.Value)
 		}
 	}
+}
+
+func (prs *JackettParser) getSearchStrings(mov *meta.Movie) (s1, s2 string) {
+	s1 = mov.NameRu
+	s2 = mov.NameOriginal
+
+	if len([]rune(s1)) < 4 && len([]rune(mov.NameOriginal)) < 4 {
+		s1 = mov.NameRu + " " + strconv.Itoa(mov.Year)
+		s2 = ""
+		if len([]rune(mov.NameOriginal)) != 0 {
+			s2 = mov.NameRu + " " + mov.NameOriginal
+		}
+	}
+	return
 }
