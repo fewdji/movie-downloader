@@ -365,7 +365,7 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, callbackId strin
 			tgbotapi.NewInlineKeyboardButtonData("💾 в телешоу", clbShow),
 		))
 	}
-	if mov.Meta.Type != torrent.FILM_TYPE && mov.Meta.Completed == false {
+	if mov.Meta.Type != torrent.FILM_TYPE && (mov.Meta.Completed == false || mov.Meta.Year == time.Now().Year()) {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("💾 в сериалы и отслеживать новые серии", clbWatch),
 		))
