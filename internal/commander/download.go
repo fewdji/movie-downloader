@@ -378,6 +378,7 @@ func (cmd *Commander) ShowMovie(inputMessage *tgbotapi.Message, callbackId strin
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, repText)
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	msg.ParseMode = "markdown"
+	msg.ReplyToMessageID = inputMessage.MessageID
 
 	ans := tgbotapi.NewCallback(callbackId, "")
 	cmd.bot.Send(ans)
