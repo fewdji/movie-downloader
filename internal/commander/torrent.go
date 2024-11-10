@@ -50,6 +50,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID,
 		fmt.Sprintf("Активные торренты (%d):", len(*torrents)))
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ReplyToMessageID = inputMessage.MessageID
 
 	delMsg()
 
@@ -135,6 +136,7 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgText)
 	msg.ParseMode = "markdown"
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ReplyToMessageID = inputMessage.MessageID
 
 	delMsg()
 
