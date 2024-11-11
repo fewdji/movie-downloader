@@ -115,7 +115,7 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	clbCancel := strings.Replace(clb, "placeholder", "del", 1)
 
 	msgText := fmt.Sprintf("*%s*\nСостояние: %s\nРазмер: %.2f Gb\nЗагружено: %.2f%%\nСиды: %d",
-		string([]rune(torrent.Title)[:20]), torrentStateIcon(torrent.State), float64(torrent.Size)/float64(1024*1024*1024), torrent.Progress, torrent.Seeds)
+		string([]rune(torrent.Title)[:20]), torrent.State /*torrentStateIcon(torrent.State)*/, float64(torrent.Size)/float64(1024*1024*1024), torrent.Progress, torrent.Seeds)
 
 	if torrent.Eta != 0 {
 		msgText += fmt.Sprintf("\nСкорость: %.2f Mb/сек.\nОсталось: %d мин.", float64(torrent.Speed)/float64(1024*1024), torrent.Eta/60)
@@ -151,8 +151,6 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 
 func torrentStateIcon(state string) string {
 	torrentStates := map[string]string{
-		"stopped":     "⏸",
-		"running":     "⏬",
 		"pausedDL":    "⏸",
 		"pausedUP":    "⏸",
 		"downloading": "⏬",
