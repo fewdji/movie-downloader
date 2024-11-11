@@ -135,6 +135,7 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgText)
 	msg.ParseMode = "markdown"
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ReplyToMessageID = 2
 
 	delMsg()
 
