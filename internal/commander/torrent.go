@@ -151,6 +151,8 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 
 func torrentStateIcon(state string) string {
 	torrentStates := map[string]string{
+		"stopped":     "⏸",
+		"running":     "⏬",
 		"pausedDL":    "⏸",
 		"pausedUP":    "⏸",
 		"downloading": "⏬",

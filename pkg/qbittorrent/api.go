@@ -348,7 +348,7 @@ func (client *Client) TorrentPieceHashes(hash string) (hashes []string, err erro
 // Pause torrents
 func (client *Client) Pause(hashes []string) (bool, error) {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := client.postMultipartData("api/v2/torrents/pause", opts)
+	resp, err := client.postMultipartData("api/v2/torrents/stop", opts)
 	if err != nil {
 		return false, err
 	}
@@ -363,7 +363,7 @@ func (client *Client) PauseOne(hash string) (bool, error) {
 // Resume torrents
 func (client *Client) Resume(hashes []string) (bool, error) {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := client.postMultipartData("api/v2/torrents/resume", opts)
+	resp, err := client.postMultipartData("api/v2/torrents/run", opts)
 	if err != nil {
 		return false, err
 	}
