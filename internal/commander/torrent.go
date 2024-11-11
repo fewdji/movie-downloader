@@ -5,6 +5,8 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -50,6 +52,7 @@ func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData Co
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID,
 		fmt.Sprintf("Активные торренты (%d):", len(*torrents)))
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	msg.ReplyToMessageID, _ = strconv.Atoi(os.Getenv("TG_THREAD_ID"))
 
 	delMsg()
 
@@ -135,7 +138,7 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, msgText)
 	msg.ParseMode = "markdown"
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-	msg.ReplyToMessageID = 2
+	msg.ReplyToMessageID, _ = strconv.Atoi(os.Getenv("TG_THREAD_ID"))
 
 	delMsg()
 
