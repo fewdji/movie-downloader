@@ -76,6 +76,7 @@ func (t *Tracker) CheckAndUpdate() {
 			}
 			log.Println(tracked.Title, "downloading...")
 			tracked.Size = mov.Size
+			tracked.Title = mov.Title
 			tracked.Updated = time.Now().Format("2006-01-02 15:04:05")
 			tracked.Status += 1
 			err = t.storage.Update(&tracked)
