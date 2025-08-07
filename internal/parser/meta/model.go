@@ -10,6 +10,7 @@ type Movie struct {
 	Type         string `json:"type"`
 	Completed    bool   `json:"completed"`
 	NameRu       string `json:"name_ru"`
+	NameEn       string `json:"name_en"`
 	NameOriginal string `json:"name_original"`
 	Year         int    `json:"year"`
 	Length       int    `json:"length"`
