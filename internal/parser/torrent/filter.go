@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"fmt"
+	"log"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/pkg/helper"
 	"slices"
@@ -77,8 +78,10 @@ func (movs *Movies) MatchTitle() *Movies {
 
 		fl = false
 		for _, gt := range goodTitles {
+			log.Print(mov.Title)
 			if helper.ContainsAll(mov.Title, gt) {
 				fl = true
+				log.Println("deleted ", mov.Title)
 			}
 		}
 		if !fl {
