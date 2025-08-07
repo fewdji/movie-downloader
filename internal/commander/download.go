@@ -229,6 +229,8 @@ func (cmd *Commander) ShowMovieList(inputMessage *tgbotapi.Message, cmdData Comm
 	}
 	res := cmd.torrent.Find(metaMovie).BaseFilter()
 
+	log.Println(res)
+
 	if metaMovie.Type != torrent.FILM_TYPE {
 		res.SortAsSeries()
 	} else {

@@ -125,8 +125,6 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *torrent.Movies {
 
 		jackettMovie.setSeeds()
 
-		log.Println(jackettMovie.Title)
-
 		torrentMovie := torrent.Movie{
 			Meta:         *metaMovie,
 			Title:        jackettMovie.Title,
