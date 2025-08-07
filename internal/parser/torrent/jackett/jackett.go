@@ -195,5 +195,8 @@ func (prs *JackettParser) getSearchStrings(mov *meta.Movie) (s1, s2 string) {
 			s2 = mov.NameRu + " " + nameOriginal
 		}
 	}
+
+	log.Println("Finding on Jackett: ", s1, " / ", s2)
+
 	return
 }
