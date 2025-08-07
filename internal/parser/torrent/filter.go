@@ -76,6 +76,8 @@ func (movs *Movies) MatchTitle() *Movies {
 			}
 		}
 
+		log.Print(goodTitles)
+
 		fl = false
 		for _, gt := range goodTitles {
 			log.Print(mov.Title)
