@@ -63,7 +63,7 @@ func (movs *Movies) MatchTitle() *Movies {
 		}
 
 		if mov.Meta.Type != FILM_TYPE {
-			goodTitles = append(goodTitles, []string{nameRu, nameOrig})
+			goodTitles = append(goodTitles, []string{nameRu}, []string{nameOrig})
 		}
 
 		fl = false

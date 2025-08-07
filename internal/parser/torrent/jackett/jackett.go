@@ -180,23 +180,17 @@ func (mov *JackettMovie) setSeeds() {
 
 func (prs *JackettParser) getSearchStrings(mov *meta.Movie) (s1, s2 string) {
 	s1 = mov.NameRu
+	s2 = mov.NameOriginal
 
-	nameOriginal := mov.NameOriginal
-	if nameOriginal == "" {
-		nameOriginal = mov.NameEn
-	}
-
-	s2 = nameOriginal
-
-	if len([]rune(s1)) < 4 && len([]rune(nameOriginal)) < 4 {
+	if len([]rune(s1)) < 4 && len([]rune(mov.NameOriginal)) < 4 {
 		s1 = mov.NameRu + " " + strconv.Itoa(mov.Year)
 		s2 = ""
-		if len([]rune(nameOriginal)) != 0 {
-			s2 = mov.NameRu + " " + nameOriginal
+		if len([]rune(mov.NameOriginal)) != 0 {
+			s2 = mov.NameRu + " " + mov.NameOriginal
 		}
 	}
 
-	log.Println("Finding on Jackett: ", s1, " / ", s2)
+	log.Print("Search strings: ", s1, " || ", s2)
 
 	return
 }
