@@ -2,7 +2,6 @@ package torrent
 
 import (
 	"fmt"
-	"log"
 	params "movie-downloader-bot/internal/config"
 	"movie-downloader-bot/pkg/helper"
 	"slices"
@@ -53,6 +52,9 @@ func (movs *Movies) MatchTitle() *Movies {
 	for i, fl := 0, false; i < len(*movs); i++ {
 		mov := (*movs)[i]
 		nameRu, nameOrig := mov.Meta.NameRu, mov.Meta.NameOriginal
+		if nameOrig == "" {
+			nameOrig = nameRu
+		}
 		year := strconv.Itoa(mov.Meta.Year)
 		yearPlus := strconv.Itoa(mov.Meta.Year + 1)
 		yearMinus := strconv.Itoa(mov.Meta.Year - 1)
@@ -71,12 +73,9 @@ func (movs *Movies) MatchTitle() *Movies {
 				endYear = time.Now().Year()
 			}
 			for y := startYear; y <= endYear; y++ {
-				goodTitles = append(goodTitles, []string{fmt.Sprintf("%s %d", nameRu, y)})
-				goodTitles = append(goodTitles, []string{fmt.Sprintf("%s %d", nameOrig, y)})
+				goodTitles = append(goodTitles, [][]string{{nameRu, strconv.Itoa(y)}, {nameOrig, strconv.Itoa(y)}}...)
 			}
 		}
-
-		log.Print(goodTitles)
 
 		fl = false
 		for _, gt := range goodTitles {
