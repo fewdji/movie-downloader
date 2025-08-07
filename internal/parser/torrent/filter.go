@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (movs *Movies) GetBest() *Movie {
@@ -63,8 +64,11 @@ func (movs *Movies) MatchTitle() *Movies {
 		}
 
 		if mov.Meta.Type != FILM_TYPE {
-			startYear := mov.Meta.Year + 2
+			startYear := mov.Meta.Year + 1
 			endYear := mov.Meta.EndYear + 1
+			if mov.Meta.EndYear == 0 {
+				endYear = time.Now().Year()
+			}
 			for y := startYear; y <= endYear; y++ {
 				goodTitles = append(goodTitles, []string{fmt.Sprintf("%s %d", nameRu, y)})
 				goodTitles = append(goodTitles, []string{fmt.Sprintf("%s %d", nameOrig, y)})
