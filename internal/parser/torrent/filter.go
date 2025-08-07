@@ -95,8 +95,6 @@ func (movs *Movies) MatchTitle() *Movies {
 }
 
 func (movs *Movies) BaseFilter() *Movies {
-
-	log.Println("Зашел")
 	return movs.MatchTitle().
 		NoTrailers().
 		NoBadQuality().
