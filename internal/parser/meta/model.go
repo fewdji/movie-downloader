@@ -13,5 +13,6 @@ type Movie struct {
 	NameEn       string `json:"name_en"`
 	NameOriginal string `json:"name_original"`
 	Year         int    `json:"year"`
+	EndYear      int    `json:"end_year"`
 	Length       int    `json:"length"`
 }

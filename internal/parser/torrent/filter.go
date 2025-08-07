@@ -63,7 +63,12 @@ func (movs *Movies) MatchTitle() *Movies {
 		}
 
 		if mov.Meta.Type != FILM_TYPE {
-			goodTitles = append(goodTitles, []string{nameRu}, []string{nameOrig})
+			startYear := mov.Meta.Year + 2
+			endYear := mov.Meta.EndYear + 1
+			for y := startYear; y <= endYear; y++ {
+				goodTitles = append(goodTitles, []string{fmt.Sprintf("%s %d", nameRu, y)})
+				goodTitles = append(goodTitles, []string{fmt.Sprintf("%s %d", nameOrig, y)})
+			}
 		}
 
 		fl = false
