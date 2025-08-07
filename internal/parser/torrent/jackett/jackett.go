@@ -105,8 +105,6 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *torrent.Movies {
 
 	torrentMovies := torrent.Movies{}
 
-	log.Println("torrents found:", torrentMovies)
-
 	unique := map[string]bool{}
 	var uniqueKey string
 
@@ -126,6 +124,8 @@ func (prs *JackettParser) Find(metaMovie *meta.Movie) *torrent.Movies {
 		unique[uniqueKey] = true
 
 		jackettMovie.setSeeds()
+
+		log.Println(jackettMovie.Title)
 
 		torrentMovie := torrent.Movie{
 			Meta:         *metaMovie,
