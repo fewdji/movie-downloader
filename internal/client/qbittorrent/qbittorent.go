@@ -5,8 +5,9 @@ import (
 	"log"
 	"movie-downloader-bot/internal/client"
 	"movie-downloader-bot/internal/parser/torrent"
-	qbt "movie-downloader-bot/pkg/qbittorrent"
 	"os"
+
+	"github.com/superturkey650/go-qbittorrent/qbt"
 )
 
 type Qbittorrent struct {
@@ -46,7 +47,7 @@ func (q *Qbittorrent) Pause(hash string) bool {
 	if t == nil {
 		return false
 	}
-	_, err := q.client.PauseOne(t.Hash)
+	err := q.client.Pause([]string{t.Hash})
 	if err != nil {
 		log.Println(err)
 	}
@@ -58,7 +59,7 @@ func (q *Qbittorrent) Resume(hash string) bool {
 	if t == nil {
 		return false
 	}
-	_, err := q.client.ResumeOne(t.Hash)
+	err := q.client.Resume([]string{t.Hash})
 	if err != nil {
 		log.Println(err)
 	}
@@ -70,7 +71,7 @@ func (q *Qbittorrent) Delete(hash string, deleteFiles bool) bool {
 	if t == nil {
 		return false
 	}
-	_, err := q.client.DeleteOne(t.Hash, deleteFiles)
+	err := q.client.Delete([]string{t.Hash}, deleteFiles)
 	if err != nil {
 		log.Println(err)
 	}
@@ -110,14 +111,16 @@ func (q *Qbittorrent) List() *client.Torrents {
 }
 
 func (q *Qbittorrent) Download(movie *torrent.Movie, category string) error {
-	err := q.client.DownloadLink(
-		movie.File,
-		category,
-		fmt.Sprintf("%s (%d)", movie.Meta.NameRu, movie.Meta.Year),
-		true,
-		false,
-		"",
-	)
+	name := fmt.Sprintf("%s (%d)", movie.Meta.NameRu, movie.Meta.Year)
+	sequential := true
+
+	downloadOpts := qbt.DownloadOptions{
+		Rename:             &name,
+		Category:           &category,
+		SequentialDownload: &sequential,
+	}
+
+	err := q.client.DownloadLinks([]string{movie.File}, downloadOpts)
 
 	log.Println("Downloading: ", movie.Link)
 
