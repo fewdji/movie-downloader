@@ -3,11 +3,12 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func (cmd *Commander) ShowTorrentList(inputMessage *tgbotapi.Message, cmdData CommandData) {
@@ -151,8 +152,8 @@ func (cmd *Commander) ShowTorrent(inputMessage *tgbotapi.Message, callbackId str
 
 func torrentStateIcon(state string) string {
 	torrentStates := map[string]string{
-		"pausedDL":    "⏸",
-		"pausedUP":    "⏸",
+		"stoppedDL":   "⏸",
+		"stoppedUP":   "⏸",
 		"downloading": "⏬",
 		"stalledDL":   "⏬",
 		"uploading":   "⏫",

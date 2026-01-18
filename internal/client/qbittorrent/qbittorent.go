@@ -105,9 +105,9 @@ func (q *Qbittorrent) List() *client.Torrents {
 			newTorrents = append(newTorrents, tor)
 		}
 		return &newTorrents
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 func (q *Qbittorrent) Download(movie *torrent.Movie, category string) error {
